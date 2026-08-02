@@ -1,0 +1,13 @@
+target/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.dev-server.*.pid
+packages/core/*.tgz
+packages/core/dist/
+
+# Staged into the package at build time; the repo root owns the originals.
+packages/core/README.md
+packages/core/LICENSE-MIT
+packages/core/LICENSE-APACHE

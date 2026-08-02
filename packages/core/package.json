@@ -1,0 +1,24 @@
+{
+  "name": "fm-synthesizers.js",
+  "version": "0.1.0",
+  "description": "FM synthesizers for the browser. Computed on the fly, no samples, tens of kilobytes.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./presets": { "types": "./dist/presets.d.ts", "default": "./dist/presets.js" },
+    "./wasm": "./dist/wasm/fm_dsp.wasm"
+  },
+  "engines": { "node": ">=18" },
+  "files": ["dist", "README.md", "LICENSE-MIT", "LICENSE-APACHE"],
+  "scripts": { "build": "node scripts/build.mjs" },
+  "keywords": ["synthesizer", "synth", "fm", "frequency-modulation", "audio", "webaudio", "audioworklet", "wasm", "dsp", "operator", "music"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keunwoochoi/fm-synthesizers.js.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html",
+  "bugs": { "url": "https://github.com/keunwoochoi/fm-synthesizers.js/issues" }
+}

@@ -1,0 +1,352 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>fm-synthesizers.js — patch showcase</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="./favicon-pixel.svg">
+<style>
+  :root{--bg:#0b0d11;--panel:#151920;--line:#252b35;--ink:#e9ecf1;--dim:#8b95a3;
+        --accent:#ffb454;--accent2:#5ad1ff;--ok:#7ee787;}
+  *{box-sizing:border-box}
+  html,body{height:100%;height:100dvh}
+  body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+       display:flex;flex-direction:column;
+       font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+  header{padding:11px 24px 12px;border-bottom:1px solid var(--line);flex:none;
+         background:var(--bg);position:relative;z-index:3}
+  .header-inner{max-width:1072px;margin:0 auto}
+  .titlebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.01em}
+  h1 span{color:var(--accent)}
+  h1 a.hl{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+  h1 a.hl:hover{text-decoration-thickness:2px}
+  h1 .ext{font-size:.72em;margin-left:2px;text-decoration:none;display:inline-block;color:var(--accent)}
+  .viewtabs{display:flex;align-items:center;gap:4px}
+  .viewtabs a{padding:3px 8px;border:1px solid transparent;border-radius:5px;color:var(--dim);
+              text-decoration:none;font-size:10.5px;font-weight:600;white-space:nowrap}
+  .viewtabs a:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
+  .viewtabs a[aria-current="page"]{color:var(--ink);border-color:var(--accent);
+                                   background:var(--panel);cursor:default}
+  .sub{color:var(--dim);font-size:13px;margin-top:6px}
+  .sub b{color:var(--accent2);font-weight:600}
+  main{width:100%;padding:14px 24px 18px;flex:1 1 auto;min-height:0;
+       overflow-y:auto;overscroll-behavior:contain}
+  .main-inner{max-width:972px;margin:0 auto}
+  .bar{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;margin-top:9px}
+  button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+         border-radius:7px;padding:10px 16px;font:inherit;cursor:pointer}
+  button:hover{border-color:#3a4351}
+  #play{background:var(--accent);color:#1a1205;border:0;font-weight:700;min-width:104px}
+  #play[disabled]{opacity:.4;cursor:default}
+  .tempo{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12px}
+  input[type=range]{accent-color:var(--accent)}
+  .cards{display:block}
+  .grouphead{margin:16px 0 8px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--group,var(--dim));font-weight:600;opacity:.86}
+  .grouphead:first-child{margin-top:0}
+  .cardrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px}
+  [data-group="bass"]{--group:#ffb454;--group-line:#6a4d2b;--group-wash:#1d1a14}
+  [data-group="lead"]{--group:#5ad1ff;--group-line:#28566a;--group-wash:#111b20}
+  [data-group="pad"]{--group:#c39bff;--group-line:#55436f;--group-wash:#191620}
+  [data-group="pluck"]{--group:#7ee787;--group-line:#35633a;--group-wash:#141d16}
+  [data-group="brass"]{--group:#ff7b72;--group-line:#6a3532;--group-wash:#201514}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+        border-top-color:var(--group-line,var(--line));padding:13px 15px;cursor:pointer;
+        transition:border-color .12s,background .12s}
+  .card:hover{border-color:var(--group-line,#3d4757)}
+  .card.on{border-color:var(--group,var(--accent));background:var(--group-wash,#1d1a14)}
+  .card h3{margin:0 0 4px;font-size:13.5px;font-weight:600}
+  .card.on h3{color:var(--group,var(--accent))}
+  .card p{margin:0;color:var(--dim);font-size:12px;line-height:1.45}
+  .visual-dock{padding:10px 24px 12px;border-top:1px solid var(--line);flex:none;
+               background:var(--bg);position:relative;z-index:3}
+  .viz{max-width:972px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
+       border-radius:9px;padding:12px}
+  canvas{width:100%;height:108px;display:block}
+  .steps{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;margin-top:8px}
+  .st{height:22px;border-radius:4px;background:#191e26;border:1px solid var(--line)}
+  .st.hit{background:#2b3442}
+  .st.acc{background:#3a4658}
+  .st.now{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .meta{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;color:var(--dim);font-size:11.5px}
+  .meta b{color:var(--ok);font-weight:600}
+  a{color:var(--accent2)}
+  @media (max-height:600px){
+    header{padding:6px 14px 7px}
+    h1{font-size:15px}
+    .bar{margin-top:5px;gap:6px 10px}
+    main{padding:9px 14px 10px}
+    .visual-dock{padding:6px 14px 7px}
+    .viz{padding:7px}
+    canvas{height:72px}
+    .steps{margin-top:5px}
+    .st{height:17px}
+  }
+</style>
+
+<header>
+  <div class="header-inner">
+    <div class="titlebar">
+      <h1><a class="hl" href="https://github.com/keunwoochoi/fm-synthesizers.js" target="_blank" rel="noopener">fm<span>-synthesizers</span>.js<span class="ext" aria-hidden="true">↗</span></a></h1>
+      <nav class="viewtabs" aria-label="Demo views">
+        <a href="./index.html">Patch editor</a>
+        <a href="./showcase.html" aria-current="page">Patch showcase</a>
+      </nav>
+    </div>
+    <div class="bar">
+      <button id="play" type="button" aria-pressed="false" title="Play / stop">▶ Play</button>
+      <div class="tempo">tempo
+        <input type="range" id="bpm" min="70" max="170" step="1" value="124">
+        <output id="bpmOut">124</output> BPM
+      </div>
+      <div class="tempo" id="status">click a patch or Play</div>
+      <div class="meta">
+        <div>riff <b id="riff">—</b></div>
+        <div>voices <b id="voices">0</b></div>
+        <div>sample rate <b id="sr">—</b></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="main-inner">
+    <div class="cards" id="cards"></div>
+  </div>
+</main>
+
+<footer class="visual-dock">
+  <div class="viz">
+    <canvas id="scope"></canvas>
+    <div class="steps" id="steps"></div>
+  </div>
+</footer>
+
+<script type="module">
+import { createEngine } from "../../packages/core/src/index.js";
+import { PRESETS, GROUPS, applyPreset } from "../../packages/core/src/presets.js";
+import { PATTERN_FOR, patternFor } from "./patterns.js";
+
+let engine = null, engineInit = null, playing = false, current = "acid";
+let step = 0, nextTime = 0, timer = null;
+const LOOKAHEAD = 0.12, TICK = 25;
+
+// Create and unlock the AudioContext SYNCHRONOUSLY inside the gesture handler.
+//
+// `await createEngine()` fetches the WASM and registers the worklet, and those awaits
+// end the user-gesture context. Safari and iOS then leave the context suspended forever
+// and the page is silent with no error anywhere -- the sibling project shipped exactly
+// this bug and fixed it the same way. Chromium with --autoplay-policy=no-user-gesture-
+// required cannot reproduce it, which is why every headless check passed.
+//
+// Resuming AND playing one silent buffer is the belt-and-braces form: some versions of
+// Safari only consider a context unlocked once it has actually rendered something.
+function unlockedContext() {
+  const ctx = new (globalThis.AudioContext ?? globalThis.webkitAudioContext)();
+  ctx.resume();                       // synchronous: still inside the gesture
+  const src = ctx.createBufferSource();
+  src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  src.connect(ctx.destination);
+  src.start(0);
+  return ctx;
+}
+
+const $ = (id) => document.getElementById(id);
+const cards = $("cards"), stepsEl = $("steps");
+
+// Thirty-six flat cards is a wall. Grouped by what the patch is FOR, in the order a
+// player thinks about a track: the low end, then the hook, then the bed, and so on.
+const LABEL = { bass: "Bass", lead: "Lead", pad: "Pad & atmosphere",
+                pluck: "Keys & pluck", brass: "Brass & stab" };
+for (const g of GROUPS) {
+  const entries = Object.entries(PRESETS).filter(([, p]) => p.group === g);
+  if (!entries.length) continue;
+  const h = document.createElement("h4");
+  h.className = "grouphead";
+  h.dataset.group = g;
+  h.textContent = `${LABEL[g] ?? g} · ${entries.length}`;
+  cards.appendChild(h);
+  const row = document.createElement("div");
+  row.className = "cardrow";
+  row.dataset.group = g;
+  for (const [key, p] of entries) {
+    const el = document.createElement("div");
+    el.className = "card" + (key === current ? " on" : "");
+    el.dataset.key = key;
+    el.dataset.group = g;
+    el.innerHTML = `<h3>${p.label}</h3><p>${p.blurb}</p>`;
+    el.onclick = async () => {
+      selectPatch(key);
+      if (!playing) await startPlayback();
+    };
+    row.appendChild(el);
+  }
+  cards.appendChild(row);
+}
+const stepEls = [];
+for (let i = 0; i < 16; i++) {
+  const d = document.createElement("div");
+  d.className = "st";
+  stepsEl.appendChild(d); stepEls.push(d);
+}
+
+function drawSteps() {
+  const pat = patternFor(current, PRESETS[current].group).steps;
+  stepEls.forEach((el, i) => {
+    const s = pat[i];
+    el.className = "st" + (s ? (s.a ? " acc" : " hit") : "");
+  });
+}
+function selectPatch(key) {
+  current = key;
+  for (const c of cards.querySelectorAll(".card"))
+    c.classList.toggle("on", c.dataset.key === key);
+  drawSteps();
+  $("riff").textContent = PATTERN_FOR[key] ?? PRESETS[key].group;
+  if (engine) { engine.clear(); applyPreset(engine, key); }
+}
+drawSteps();
+$("riff").textContent = PATTERN_FOR[current] ?? PRESETS[current].group;
+
+$("bpm").oninput = (e) => { $("bpmOut").value = e.target.value; };
+
+// --- scheduler: classic lookahead. A JS timer decides WHICH notes, the worklet decides
+// WHEN, to the frame. The timer only has to be roughly on time.
+function schedule() {
+  const bpm = Number($("bpm").value);
+  const stepDur = 60 / bpm / 4;              // 16th notes
+  const pat = patternFor(current, PRESETS[current].group);
+  const events = [];
+  while (nextTime < engine.context.currentTime + LOOKAHEAD) {
+    const s = pat.steps[step % 16];
+    if (s) {
+      const notes = Array.isArray(s.n) ? s.n : [s.n];
+      const vel = s.a ? 1.0 : 0.68;
+      const off = nextTime + stepDur * pat.gate;
+      for (const n of notes) {
+        events.push({ type: "noteOn", note: n, vel, at: nextTime });
+        events.push({ type: "noteOff", note: n, at: off });
+      }
+    }
+    const at = nextTime, idx = step % 16;
+    setTimeout(() => highlight(idx),
+      Math.max(0, (at - engine.context.currentTime) * 1000));
+    nextTime += stepDur;
+    step++;
+  }
+  if (events.length) engine.schedule(events);
+}
+function highlight(i) {
+  stepEls.forEach((el, j) => el.classList.toggle("now", j === i && playing));
+}
+
+// --- visualiser
+const cv = $("scope"), cx = cv.getContext("2d");
+let analyser = null, buf = null;
+function resize() {
+  const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+  cv.width = r.width * d; cv.height = r.height * d; cx.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener("resize", resize);
+function draw() {
+  requestAnimationFrame(draw);
+  if (!analyser) return;
+  const w = cv.width / (devicePixelRatio || 1), h = cv.height / (devicePixelRatio || 1);
+  cx.clearRect(0, 0, w, h);
+
+  analyser.getByteFrequencyData(buf);
+  const bars = 96;
+  for (let i = 0; i < bars; i++) {
+    // Log frequency axis: a linear one wastes 90% of the width on content nobody hears
+    // as pitch, and the filter sweep — the thing worth seeing — happens in the low third.
+    const f = Math.pow(i / bars, 2.2);
+    const v = buf[Math.min(buf.length - 1, Math.floor(f * buf.length))] / 255;
+    const bh = v * h * 0.92;
+    cx.fillStyle = `rgba(255,180,84,${0.18 + v * 0.65})`;
+    cx.fillRect((i / bars) * w, h - bh, w / bars - 1.5, bh);
+  }
+  analyser.getByteTimeDomainData(buf);
+  cx.beginPath();
+  cx.strokeStyle = "#5ad1ff"; cx.lineWidth = 1.6;
+  for (let i = 0; i < buf.length; i++) {
+    const x = (i / buf.length) * w, y = h / 2 + ((buf[i] - 128) / 128) * h * 0.42;
+    i ? cx.lineTo(x, y) : cx.moveTo(x, y);
+  }
+  cx.stroke();
+}
+draw();
+
+async function ensureEngine() {
+  if (engine) return true;
+  if (!engineInit) {
+    // This call must remain before the first await so a patch-card click unlocks Safari
+    // just as reliably as the explicit Play button.
+    const ctx = unlockedContext();
+    $("play").disabled = true;
+    $("status").textContent = "loading engine…";
+    engineInit = (async () => {
+      const created = await createEngine({
+        context: ctx,
+        wasmUrl: "../../packages/core/wasm/fm_dsp.wasm",
+        workletUrl: "../../packages/core/worklet/processor.js",
+      });
+      await created.resume();
+      analyser = created.context.createAnalyser();
+      analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.72;
+      buf = new Uint8Array(analyser.frequencyBinCount);
+      created.node.connect(analyser);
+      applyPreset(created, current);
+      created.onStats = (s) => { $("voices").textContent = s.voices; };
+      resize();
+      $("sr").textContent = created.context.sampleRate + " Hz";
+      engine = created;
+    })();
+  }
+  try {
+    await engineInit;
+    $("status").textContent = "";
+    return true;
+  } catch (e) {
+    engineInit = null;
+    $("status").textContent = "failed: " + e.message;
+    return false;
+  } finally {
+    $("play").disabled = false;
+  }
+}
+
+function setPlaying(next) {
+  if (playing === next) return;
+  playing = next;
+  $("play").textContent = playing ? "■ Stop" : "▶ Play";
+  $("play").setAttribute("aria-pressed", String(playing));
+  $("status").textContent = "";
+  if (playing) {
+    step = 0; nextTime = engine.context.currentTime + 0.08;
+    timer = setInterval(schedule, TICK);
+  } else {
+    clearInterval(timer); timer = null; engine.clear(); highlight(-1);
+  }
+}
+
+async function startPlayback() {
+  if (playing) return;
+  if (await ensureEngine()) setPlaying(true);
+}
+
+async function togglePlayback() {
+  if (playing) setPlaying(false);
+  else await startPlayback();
+}
+
+$("play").onclick = () => { void togglePlayback(); };
+addEventListener("keydown", (event) => {
+  if (event.code !== "Space" || event.repeat || event.altKey || event.ctrlKey ||
+      event.metaKey || event.shiftKey) return;
+  const target = event.target;
+  if (target instanceof Element &&
+      target.closest("button, input, select, textarea, a, [contenteditable='true']")) return;
+  event.preventDefault();
+  void togglePlayback();
+});
+
+</script>

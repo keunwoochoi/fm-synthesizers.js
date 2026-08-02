@@ -1,0 +1,51 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { auditNpmReadme } from "./check_npm_readme.mjs";
+
+const real = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
+const manifest = JSON.parse(readFileSync(new URL("../../packages/core/package.json", import.meta.url), "utf8"));
+const withReleaseText = (body) => `${real}\n${body}\n`;
+
+test("the current generated npm README satisfies the consumer contract", () => {
+  assert.deepEqual(auditNpmReadme({ version: manifest.version, readme: real }), []);
+  const misplaced = real.replace("\n\n## Install\n", "\n\n## Demo\n\n## Install\n");
+  const failures = auditNpmReadme({ version: manifest.version, readme: misplaced });
+  assert.ok(failures.some((failure) => failure.includes("obsolete Demo heading")), failures.join("\n"));
+  const links = real.match(/^\[npm package\].*$/m)?.[0];
+  assert.ok(links);
+  const linksAfterInstall = real.replace(`${links}\n\n## Install\n`, `## Install\n\n${links}\n`);
+  const placementFailures = auditNpmReadme({ version: manifest.version, readme: linksAfterInstall });
+  assert.ok(placementFailures.some((failure) => failure.includes("between the summary and Install")), placementFailures.join("\n"));
+});
+
+test("a final manifest fails closed on pre-release status language", () => {
+  const readme = withReleaseText("> **Release status:** This checkout carries pre-release manifest version `9.8.7`. The install command below is the intended registry path after a later publish.");
+  const failures = auditNpmReadme({ version: "9.8.7", readme });
+  assert.ok(failures.some((failure) => failure.includes("stale release language")), failures.join("\n"));
+});
+
+test("a final manifest passes without a release-status paragraph", () => {
+  assert.deepEqual(auditNpmReadme({ version: "9.8.7", readme: real }), []);
+});
+
+test("a published release-status paragraph is obsolete", () => {
+  const readme = withReleaseText("> **Release status:** Published on npm.");
+  const failures = auditNpmReadme({ version: "9.8.7", readme });
+  assert.ok(failures.some((failure) => failure.includes("obsolete release-status paragraph")), failures.join("\n"));
+});
+
+test("a final manifest fails when its status still calls publication a separate operation", () => {
+  const readme = withReleaseText("> **Release status:** This checkout carries final manifest version `9.8.7`. Registry publication is a separate human-authorized operation.");
+  const failures = auditNpmReadme({ version: "9.8.7", readme });
+  assert.ok(failures.some((failure) => failure.includes("stale release language")), failures.join("\n"));
+});
+
+test("a package-relative asset that is absent from the tarball fails", () => {
+  const broken = real.replace(
+    "https://raw.githubusercontent.com/keunwoochoi/fm-synthesizers.js/main/assets/logo/logo-256.png",
+    "assets/logo/logo-256.png",
+  );
+  const failures = auditNpmReadme({ version: manifest.version, readme: broken });
+  assert.ok(failures.some((failure) => failure.includes("not shipped")), failures.join("\n"));
+});

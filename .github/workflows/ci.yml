@@ -1,0 +1,126 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      # Intent provenance is a history claim: the audit reads the frozen migration
+      # cutoff and proves every future prior intent is an ancestor of its preset.
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      # rust-toolchain.toml pins the exact version. The pin exists because the shipped
+      # WASM is committed and byte-compared; a moving channel means different bytes.
+      - run: rustup show && rustup target add wasm32-unknown-unknown
+      - run: pip install -r scripts/requirements-dev.txt
+      - run: npm ci --no-audit --no-fund
+
+      - name: Build WASM
+        run: cargo build -p fm-dsp --target wasm32-unknown-unknown --release
+
+      - name: Rust unit tests
+        run: cargo test -p fm-dsp --lib
+
+      - name: Shipped WASM matches source, and the bundle is inside budget
+        run: scripts/audit/bundle-size-audit.sh
+
+      - name: Grade the oscillator against its analytic prototype
+        run: python3 scripts/verify/verify_spec.py
+
+      - name: Engine checks on the shipped WASM
+        run: node scripts/verify/check_engine.mjs
+
+      - name: Public engine lifecycle and worklet failure paths
+        run: npm run test:lifecycle
+
+      - name: DSP budget
+        run: node scripts/verify/dsp_bench.mjs
+
+      - name: Patch bank
+        run: node scripts/verify/check_patches.mjs
+
+      - name: Harness audit (identity, fixtures, intents, generated docs, referents)
+        run: scripts/audit/harness-audit.sh
+
+      - name: Strict installed TypeScript consumer
+        run: npm run check:types
+
+      - name: Published package metadata and declarations
+        run: npm run check:package
+
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: rustup show && rustup target add wasm32-unknown-unknown
+      - run: cargo build -p fm-dsp --target wasm32-unknown-unknown --release
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium webkit
+      # Proves the part scripts/verify cannot see: the AudioWorklet lifecycle, the
+      # module handshake, and whether a noteOn actually produces non-silent audio.
+      - run: node scripts/dev/e2e-check.mjs
+      - run: node scripts/dev/showcase-check.mjs
+      - run: node scripts/dev/arp-check.mjs
+      - run: node scripts/dev/playground-audio-check.mjs
+      - run: BROWSER=webkit node scripts/dev/playground-audio-check.mjs
+      # Safari's engine, where audio APIs most often differ. A stated principle
+      # ("works where web devs work") that nothing verified until now.
+      - run: BROWSER=webkit node scripts/dev/e2e-check.mjs
+      - run: BROWSER=webkit node scripts/dev/showcase-check.mjs
+      # The release gate: pack, install clean, and make a sound from the PUBLISHED files.
+      - name: Packed package on Chromium
+        run: BROWSER=chromium node scripts/dev/install-check.mjs
+      - name: Packed package on WebKit
+        run: BROWSER=webkit node scripts/dev/install-check.mjs
+      # The README's quickstart, run verbatim against the installed package on a LIVE
+      # context. A snippet nobody has executed is a bug report waiting.
+      - name: README quickstart on Chromium
+        run: BROWSER=chromium node scripts/verify/check_quickstart.mjs
+      - name: README quickstart on WebKit
+        run: BROWSER=webkit node scripts/verify/check_quickstart.mjs
+
+  bundlers:
+    # Separate job: it installs three real bundlers from the registry, so it is the
+    # slowest thing here and it fails for reasons unrelated to the DSP. Keeping it apart
+    # means a bundler outage does not hide an audio regression.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: rustup show && rustup target add wasm32-unknown-unknown
+      - run: cargo build -p fm-dsp --target wasm32-unknown-unknown --release
+      - run: cp target/wasm32-unknown-unknown/release/fm_dsp.wasm packages/core/wasm/
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      # PRINCIPLES #6, "zero-config or it doesn't ship", measured instead of asserted:
+      # build the library into real Vite, webpack and Next apps and make each BUILT
+      # bundle produce audio. Caught a dead code branch that failed webpack outright.
+      - run: node scripts/dev/bundler-check.mjs
+
+  human-block:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require a non-empty HUMAN block
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! grep -q '^## HUMAN:' <<<"$BODY"; then
+            echo "::error::PR body is missing the '## HUMAN:' section."; exit 1
+          fi
+          CONTENT=$(sed -n '/^## HUMAN:/,$p' <<<"$BODY" | tail -n +2 | sed '/^<!--/,/-->/d' | tr -d '[:space:]')
+          if [ -z "$CONTENT" ]; then
+            echo "::error::The HUMAN block is empty. The owner must write it — agents must not."
+            exit 1
+          fi

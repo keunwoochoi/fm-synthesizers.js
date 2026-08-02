@@ -1,0 +1,232 @@
+//! One FM voice: a fixed set of operators in a curated algorithm.
+//!
+//! PRINCIPLES: the signal path is fixed and curated, not a modular environment. What
+//! varies is the patch -- which algorithm, which ratios, which indices, which envelopes.
+//! The classic FM signatures (electric-piano-ish, bell, breathy brass) are known
+//! combinations of those, and this module is the machine that produces them.
+
+use crate::filter::HalfBand;
+use crate::op::Operator;
+
+/// Four operators cover the classic 2-op and 4-op signatures. The roster needs no more.
+pub const MAX_OPS: usize = 4;
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Algorithm {
+    /// Carrier + 1 modulator. The classic 2-op FM signature.
+    Mod1,
+    /// Carrier + 2 parallel modulators. Brass and rich plucks.
+    Mod2,
+    /// Two stacked modulator->carrier pairs summed. The e-piano-ish 4-op stack.
+    Stack2,
+    /// The first modulator modulates itself (feedback), then the carrier.
+    Feedback,
+}
+
+impl Algorithm {
+    pub fn from_u32(v: u32) -> Self {
+        match v {
+            1 => Algorithm::Mod2,
+            2 => Algorithm::Stack2,
+            3 => Algorithm::Feedback,
+            _ => Algorithm::Mod1,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Patch {
+    pub algorithm: Algorithm,
+    /// The headline FM control: scales how hard modulators drive carriers. Velocity
+    /// opens it further via `vel_to_index`.
+    pub index: f32,
+    pub feedback: f32,
+    pub vel_to_index: f32,
+    /// Per-operator: ratio to the note pitch, output level, and ADSR.
+    pub ratio: [f32; MAX_OPS],
+    pub level: [f32; MAX_OPS],
+    pub adsr: [(f32, f32, f32, f32); MAX_OPS],
+}
+
+impl Patch {
+    /// A usable default: the classic e-piano-ish ratio set, so the first note anyone
+    /// plays is recognisable rather than a mistake.
+    pub const fn init() -> Self {
+        Patch {
+            algorithm: Algorithm::Mod1,
+            index: 0.5,
+            feedback: 0.0,
+            vel_to_index: 0.3,
+            ratio: [1.0, 2.0, 3.0, 4.0],
+            level: [0.7, 0.6, 0.5, 0.5],
+            adsr: [
+                (0.005, 0.30, 0.50, 0.20),
+                (0.005, 0.30, 0.50, 0.20),
+                (0.005, 0.30, 0.50, 0.20),
+                (0.005, 0.30, 0.50, 0.20),
+            ],
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Voice {
+    pub note: u8,
+    pub active: bool,
+    pub age: u32,
+    ops: [Operator; MAX_OPS],
+    /// Decimators for the 4x-oversampled path (4x -> 2x, then 2x -> 1x).
+    pub hb: [HalfBand; 2],
+    /// The previous output sample of the feedback operator, for self-modulation.
+    fb_last: f32,
+    f0: f32,
+    vel: f32,
+    /// Per-voice drift, so a chord does not phase-lock into a cheap-sounding block.
+    drift_cents: f32,
+}
+
+impl Voice {
+    pub const fn new() -> Self {
+        Voice {
+            note: 0,
+            active: false,
+            age: 0,
+            ops: [Operator::new(); MAX_OPS],
+            hb: [HalfBand::new(); 2],
+            fb_last: 0.0,
+            f0: 440.0,
+            vel: 1.0,
+            drift_cents: 0.0,
+        }
+    }
+
+    pub fn start(&mut self, note: u8, vel: f32, patch: &Patch, sr: f32, seed: u32) {
+        self.note = note;
+        self.active = true;
+        self.age = 0;
+        self.vel = vel.clamp(0.0, 1.0);
+        self.f0 = midi_to_hz(note as f32);
+        self.hb[0].reset();
+        self.hb[1].reset();
+
+        // Per-voice drift: a slow bounded random walk in cents, so a chord breathes
+        // instead of phase-locking. FM operators lock even more readily than a VCO
+        // bank, so this matters more here, not less.
+        let mut s = seed.wrapping_mul(2654435761).wrapping_add(note as u32);
+        s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+        self.drift_cents = (s as f32 / u32::MAX as f32 - 0.5) * 6.0;
+
+        for i in 0..MAX_OPS {
+            // Random start phases: operators that begin aligned add into one loud
+            // transient and then comb-filter each other.
+            s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+            self.ops[i].set_phase(s as f32 / u32::MAX as f32);
+            let (a, d, ss, r) = patch.adsr[i];
+            self.ops[i].env.set(a, d, ss, r, sr);
+            self.ops[i].env.gate_on();
+        }
+        self.fb_last = 0.0;
+
+        self.update_freqs(patch, sr);
+    }
+
+    fn update_freqs(&mut self, patch: &Patch, sr: f32) {
+        let drift = cents(self.drift_cents);
+        for i in 0..MAX_OPS {
+            self.ops[i].set_freq(self.f0 * patch.ratio[i] * drift, sr);
+        }
+    }
+
+    pub fn release(&mut self) {
+        for i in 0..MAX_OPS {
+            self.ops[i].env.gate_off();
+        }
+    }
+
+    /// Decimate four 4x-rate samples down to one 1x-rate sample, via two half-band
+    /// stages (4x -> 2x -> 1x). Each stage removes the upper octave of its input.
+    #[inline]
+    pub fn decimate4(&mut self, a: f32, b: f32, c: f32, d: f32) -> f32 {
+        let ab = self.hb[0].decimate(a, b);
+        let cd = self.hb[0].decimate(c, d);
+        self.hb[1].decimate(ab, cd)
+    }
+
+    /// Render one output sample at the OVER- (or under-) sampled rate.
+    ///
+    /// `sr` here is the rate the voice is actually running at (2x when oversampled).
+    /// The index an operator drives downstream with is `level * env`; the carrier's
+    /// own output is amplitude, not phase deviation, so it does not feed back.
+    #[inline]
+    pub fn tick(&mut self, patch: &Patch, sr: f32) -> f32 {
+        if !self.active {
+            return 0.0;
+        }
+        self.update_freqs(patch, sr);
+
+        let idx = patch.index * (1.0 + patch.vel_to_index * (self.vel * 2.0 - 1.0));
+        let out = match patch.algorithm {
+            Algorithm::Mod1 => {
+                // op1 modulates op2; op2 is the carrier.
+                let mod_out = self.ops[0].tick(0.0) * patch.level[0] * idx;
+                self.ops[1].tick(mod_out) * patch.level[1]
+            }
+            Algorithm::Mod2 => {
+                // op1 and op3 both modulate op2, summed; op2 is the carrier.
+                let m1 = self.ops[0].tick(0.0) * patch.level[0] * idx;
+                let m2 = self.ops[2].tick(0.0) * patch.level[2] * idx;
+                self.ops[1].tick(m1 + m2) * patch.level[1]
+            }
+            Algorithm::Stack2 => {
+                // op1 -> op2 and op3 -> op4, the two carriers summed.
+                let m1 = self.ops[0].tick(0.0) * patch.level[0] * idx;
+                let c1 = self.ops[1].tick(m1) * patch.level[1];
+                let m2 = self.ops[2].tick(0.0) * patch.level[2] * idx;
+                let c2 = self.ops[3].tick(m2) * patch.level[3];
+                c1 + c2
+            }
+            Algorithm::Feedback => {
+                // op1 modulates ITSELF (its own previous output), then op2. The
+                // self-modulation is the classic feedback FM character, and the
+                // stability risk the verification doc warns about.
+                let fb = self.fb_last * patch.feedback;
+                let m1 = self.ops[0].tick(fb) * patch.level[0] * idx;
+                self.fb_last = m1;
+                self.ops[1].tick(m1) * patch.level[1]
+            }
+        };
+
+        if self.ops.iter().all(|o| o.env.is_idle()) {
+            // Done only when EVERY operator has released to silence. With per-operator
+            // envelopes, one operator ringing while others are idle is a real sound (a
+            // bell's modulator outlasting its carrier is the tail).
+            self.active = false;
+        }
+        self.age = self.age.saturating_add(1);
+        out * 0.5
+    }
+}
+
+#[inline]
+pub fn midi_to_hz(n: f32) -> f32 {
+    440.0 * ((n - 69.0) / 12.0).exp2()
+}
+
+#[inline]
+fn cents(c: f32) -> f32 {
+    (c / 1200.0).exp2()
+}
+
+/// Master limiter: value- and slope-continuous at the knee, so it never introduces a
+/// discontinuity of its own. Degradation is acceptable; corruption is not.
+#[inline]
+pub fn soft_clip(x: f32) -> f32 {
+    const KNEE: f32 = 0.7;
+    if x.abs() <= KNEE {
+        x
+    } else {
+        let s = x.signum();
+        let over = x.abs() - KNEE;
+        s * (KNEE + (1.0 - KNEE) * crate::filter::tanh_fast(over / (1.0 - KNEE)))
+    }
+}
