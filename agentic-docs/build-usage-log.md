@@ -9,11 +9,27 @@ of process cost, not a gate.
 
 | session | date (UTC) | opencode | model | cost USD | tokens total | owner msgs | agent msgs | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 0.6340 | 184,941,124 | 3 | 505 | 537 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 0.7016 | 207,211,756 | 4 | 546 | 577 |
 
 The `tokens total` column is input + output + reasoning + cache-read + cache-write for
 the session. It is the rough budget consumed, not a billable figure; the cost column is
 the number the model's provider actually charges.
+
+## The exchanges, summarized
+
+The owner sent four messages across the whole build. What each asked for:
+
+1. **Start the sibling, and instrument the build itself.** Read the knowledge base and
+   the shipped siblings, then build `fm-synthesizers.js` — and this time record token
+   cost, talk count, model, and opencode version so the build has a number attached.
+2. **Ship it.** Create the GitHub repo under the owner's account, wire up the remote,
+   and push.
+3. **Drive to release.** Keep going autonomously through the milestones until the
+   package is release-ready.
+4. **Identity and polish.** Give FM its own logo (the `[FM]` mark in violet instead of
+   the subtractive `[-]` in blue), its own dark-purple demo theme, an agentic-build-log
+   README section with a per-turn summary, live demo pages, and FM-shaped patches and
+   demos rather than subtractive's.
 
 ## How to record a session
 

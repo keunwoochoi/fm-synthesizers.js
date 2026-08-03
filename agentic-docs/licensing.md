@@ -67,6 +67,7 @@ Every ported file: `| path | origin file | origin license | date | PR | notes |`
 | `packages/core/src/index.js` (createEngine surface) | `subtractive-synthesizers.js` `packages/core/src/index.js` @ `91d64da` (M0 fork) | MIT OR Apache-2.0 (same owner) | 2026-08-02 | M0 | The control plane (lazy/SSR-safe `createEngine`, `wasmUrl`/`workletUrl`/`initialEvents`/offline-render contract) with the shared public API kept identical by design. Error prefixes renamed. |
 | `packages/core/scripts/build.mjs` | `subtractive-synthesizers.js` same path @ `91d64da` (M0 fork) | MIT OR Apache-2.0 (same owner) | 2026-08-02 | M0 | Build inlines the worklet as a string and stages README + licences. Renamed wasm output. |
 | `scripts/audit/*`, `scripts/gen_parameters.mjs`, `scripts/gen_docs.py`, `scripts/gh-owner.sh`, `.githooks/*`, `.github/*` | `subtractive-synthesizers.js` same paths @ `91d64da` (M0 fork) | MIT OR Apache-2.0 (same owner) | 2026-08-02 | M0 | The agent-discipline harness and CI shape, copied with vocabulary changes only. Contains no audio. |
+| `scripts/dev/gen-logo-mosaic.py`, `scripts/dev/render-logo.sh` | `subtractive-synthesizers.js` same paths @ `91d64da` (M0 fork) | MIT OR Apache-2.0 (same owner) | 2026-08-02 | M5 | Logo mosaic generator, copied then adapted for FM: violet palette (`g < r` hue test replaces the steel `b > r` test) and the `[FM]` glyph. |
 
 > M0 copies are from `subtractive-synthesizers.js` @ `91d64da` (HEAD at fork time, 2026-08-02).
 

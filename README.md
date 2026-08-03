@@ -175,8 +175,8 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **18.0 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 5.6x |
+| audio-thread budget used | **17.7 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 5.7x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -284,6 +284,45 @@ and its electric-piano-ish and bell signatures the most recognisable synthesizer
 timbre after the analog classics. The DX7's popularity turned FM into a specific
 cultural memory while its patents were still live; both the patents and the marketing
 hype are long gone, and what remains is a genuinely distinct way to shape a spectrum.
+
+## Agentic build log
+
+This library was built by a coding agent working with the owner in one continuous
+session, and the cost of that is recorded here rather than remembered. Numbers are
+generated from the session database by `scripts/usage/usage-log.py`; the table below is
+a point-in-time snapshot at 0.1.0 and drifts as the project moves on. The column
+*exchanges* is the number of messages the owner sent the agent — every intervention,
+instruction, or correction — and *agent turns* is the agent's replies plus tool calls.
+
+| session | model | opencode | cost USD | tokens total | owner exchanges | agent turns | tool calls |
+|---|---:|---|---:|---:|---:|---:|---:|
+| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 0.70 | 207,211,756 | 4 | 546 | 577 |
+
+`tokens total` is input + output + reasoning + cache-read for the session — the rough
+budget consumed, not a billable figure. `cost USD` is the number the provider actually
+charges.
+
+### The exchanges, summarized
+
+The owner talked to the agent four times over the whole build. What each turn asked for:
+
+1. **Start the sibling, and instrument the build itself.** Read the knowledge base and
+   the shipped siblings, then build `fm-synthesizers.js` — and this time record the token
+   cost, the number of times we talk, the model, and the opencode version, so the build
+   has a number attached to it.
+2. **Ship it.** Create the GitHub repo under the owner's account, wire up the remote, and
+   push. (Also implicitly: enable the demo pages, which the owner later found were 404.)
+3. **Drive to release.** Keep going autonomously through the milestones until the package
+   is ready to release.
+4. **Identity and polish.** Give FM its own logo (the `[FM]` mark in violet instead of
+   the subtractive `[-]` in blue), its own dark-purple theme for the demo pages, an
+   agentic-build-log section in the README with a per-turn summary, and make sure the
+   demo pages are actually live — and keep the patches and demos FM-shaped rather than
+   reusing subtractive's.
+
+The point of the table is not to celebrate the number; it is to make the cost of this
+way of working visible and checkable. The session it describes is the entire build from
+empty directory to release-ready package.
 
 ## License
 

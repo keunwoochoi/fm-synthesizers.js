@@ -3,7 +3,7 @@
 
 The favicon SVG stays the single owner of the mark; this script derives the
 logo from it by sampling a 24x24 grid and snapping every tile to a fixed
-three-tone steel palette (plus a lifted plate tone), so the logo reads as
+three-tone violet palette (plus a lifted plate tone), so the logo reads as
 deliberate pixel art rather than a blurry downscale.
 
 Requires rsvg-convert (brew install librsvg) and ImageMagick (brew install
@@ -23,9 +23,9 @@ FAVICON_OUT = ROOT / "apps/playground/favicon-pixel.svg"  # generated pixel-art 
 GRID = 24            # tiles across
 TILE_FRAC = 0.80     # tile side as a fraction of grid pitch (rest is grout)
 CORNER_FRAC = 0.26   # tile corner radius as a fraction of tile side
-PLATE = (18, 21, 28)         # favicon plate #12151c
-PLATE_TILE = (34, 40, 54)    # lifted so the tile texture reads against grout
-GROUT = "#0b0d11"
+PLATE = (20, 17, 32)         # favicon plate #141120
+PLATE_TILE = (43, 34, 68)    # lifted so the tile texture reads against grout
+GROUT = "#0a0812"
 FIT_SCALE = 1.2      # enlarge the mark about plate center; see comment in main()
 PLATE_RX = 15.0      # plate corner radius, favicon units (matches favicon and grout rect)
 
@@ -50,14 +50,15 @@ def cell_on_plate(i, j, pitch):
 
 
 def snap(c):
-    """Fixed palette: steel-blue hues -> 3 metallic tones, else plate tone."""
+    """Fixed palette: violet hues -> 3 metallic tones, else plate tone."""
     lum = 0.30 * c[0] + 0.59 * c[1] + 0.11 * c[2]
-    if c[2] - c[0] > 14 and lum > 50:
+    # Violet is red-dominant (g < r) where steel is cyan-dominant (g > r).
+    if c[1] < c[0] and lum > 50:
         if lum >= 180:
-            return (214, 232, 247)
+            return (234, 220, 255)
         if lum >= 110:
-            return (150, 183, 214)
-        return (90, 128, 168)
+            return (184, 146, 240)
+        return (122, 79, 196)
     return PLATE_TILE
 
 
