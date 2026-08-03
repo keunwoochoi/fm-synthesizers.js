@@ -6,22 +6,19 @@
 // bank.
 //
 // EVERY patch is merged over DEFAULTS before it is sent. The engine is stateful, so a
-// partial patch would inherit whatever the last one set.
-//
-// The bank is intentionally empty at bootstrap. Patches land with a PRIOR intent
-// committed first (see patches/<id>/intent.md and scripts/verify/check_intents.py);
-// the roster is M3 work, curation-heavy by design.
+// partial patch would inherit whatever the last one set. Completeness is structural
+// here, not a review habit.
 
-import { PARAM_DEFAULTS } from "./parameters.js";
+import { ALGORITHM, PARAM_DEFAULTS } from "./parameters.js";
 
 /** Neutral starting point. Any field a patch omits is RESET to this, never left behind. */
 export const DEFAULTS = PARAM_DEFAULTS;
 
-/** `group` picks the demo pattern: a bell and a brass pad do not want the same notes. */
+/** `group` picks the demo pattern: a bass and a bell do not want the same notes. */
 export const PRESETS = {};
 
 /** Demo pattern groups, in menu order. */
-export const GROUPS = ["keys", "brass"];
+export const GROUPS = ["keys", "brass", "bass", "pluck", "pad"];
 
 export function applyPreset(engine, name) {
   const p = PRESETS[name];
