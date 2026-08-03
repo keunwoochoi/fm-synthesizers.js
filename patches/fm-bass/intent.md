@@ -1,7 +1,7 @@
 # Patch intent: fm-bass
 
 Preset: `fm-bass`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

@@ -1,7 +1,7 @@
 # Patch intent: breathy-brass
 
 Preset: `breathy-brass`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

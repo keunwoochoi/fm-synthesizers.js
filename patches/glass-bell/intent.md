@@ -1,7 +1,7 @@
 # Patch intent: glass-bell
 
 Preset: `glass-bell`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

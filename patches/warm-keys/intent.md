@@ -1,7 +1,7 @@
 # Patch intent: warm-keys
 
 Preset: `warm-keys`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

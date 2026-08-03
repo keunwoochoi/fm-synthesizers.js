@@ -1,7 +1,7 @@
 # Patch intent: fb-pad
 
 Preset: `fb-pad`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

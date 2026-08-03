@@ -7,7 +7,7 @@
 ## Product summary
 
 <!-- generated:product-summary -->
-A 25.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 26.1 KB gzipped browser FM synthesizer with 10 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 ## Bundle
@@ -18,11 +18,11 @@ A 25.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documente
 | `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
-| `packages/core/src/presets.js` | 1,287 B | 768 B |
+| `packages/core/src/presets.js` | 6,497 B | 1,961 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **25,554 B (25.0 KB)** |
+| **total** | | **26,747 B (26.1 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **41%**.
+Budget is 60 KB gzipped for the whole library — currently **43%**.
 <!-- /generated:bundle -->
 
 ## Alias suppression (the M1 gate)
@@ -56,7 +56,12 @@ Budget is 60 KB gzipped for the whole library — currently **41%**.
 <!-- generated:roster -->
 | group | patches |
 |---|---:|
-| **total** | **0** |
+| keys | 5 |
+| pluck | 2 |
+| brass | 1 |
+| bass | 1 |
+| pad | 1 |
+| **total** | **10** |
 <!-- /generated:roster -->
 
 ## Audio-thread budget

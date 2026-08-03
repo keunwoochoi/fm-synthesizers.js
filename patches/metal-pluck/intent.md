@@ -1,7 +1,7 @@
 # Patch intent: metal-pluck
 
 Preset: `metal-pluck`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 
