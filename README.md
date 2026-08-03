@@ -8,7 +8,7 @@
 [![license](https://img.shields.io/npm/l/fm-synthesizers.js.svg)](LICENSE-MIT)
 
 <!-- generated:product-summary -->
-A 26.1 KB gzipped browser FM synthesizer with 10 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 26.8 KB gzipped browser FM synthesizer with 19 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 [npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)
@@ -43,12 +43,13 @@ Call `createEngine()` from a user gesture because browsers control when audio ma
 <!-- generated:roster -->
 | group | patches |
 |---|---:|
-| keys | 5 |
-| pluck | 2 |
+| keys | 7 |
+| pluck | 4 |
+| bass | 3 |
+| pad | 2 |
+| lead | 2 |
 | brass | 1 |
-| bass | 1 |
-| pad | 1 |
-| **total** | **10** |
+| **total** | **19** |
 <!-- /generated:roster -->
 
 ## Compatibility and lifecycle
@@ -162,11 +163,11 @@ Alias suppression is a hard CI gate with the shipped 4× path clearing -35 dB wo
 | `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
-| `packages/core/src/presets.js` | 6,499 B | 1,959 B |
+| `packages/core/src/presets.js` | 11,235 B | 2,695 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **26,745 B (26.1 KB)** |
+| **total** | | **27,481 B (26.8 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **43%**.
+Budget is 60 KB gzipped for the whole library — currently **44%**.
 <!-- /generated:bundle -->
 
 ## Runtime cost
@@ -175,8 +176,8 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **19.6 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 5.1x |
+| audio-thread budget used | **21.9 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 4.6x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -218,11 +219,11 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 <!-- generated:intent-coverage -->
 | intent coverage | count |
 |---|---:|
-| exported presets | 10 |
-| exactly mapped implemented intents | 10 |
-| written before implementation | 10 |
+| exported presets | 19 |
+| exactly mapped implemented intents | 19 |
+| written before implementation | 19 |
 | reconstructed after implementation | 0 |
-| proposed before implementation | 10 |
+| proposed before implementation | 0 |
 <!-- /generated:intent-coverage -->
 
 ## Harness

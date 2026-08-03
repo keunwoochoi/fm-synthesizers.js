@@ -109,7 +109,7 @@ try {
   if (docks.redundantEditorLink) fail("showcase still has the redundant full-editor text link");
   if (/space toggles/i.test(docks.statusText) || /space/i.test(docks.playTitle))
     fail("showcase still displays Space shortcut helper text");
-  if (docks.families.length !== 5 || docks.families.some((family) => family.cards < 1) ||
+  if (docks.families.length !== 6 || docks.families.some((family) => family.cards < 1) ||
       new Set(docks.families.map((family) => family.color)).size !== docks.families.length)
     fail(`patch-family palettes are missing or not distinct: ${JSON.stringify(docks.families)}`);
 

@@ -1,7 +1,7 @@
 # Patch intent: steel-drums
 
 Preset: `steel-drums`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

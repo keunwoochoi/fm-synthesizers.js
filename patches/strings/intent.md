@@ -1,7 +1,7 @@
 # Patch intent: strings
 
 Preset: `strings`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

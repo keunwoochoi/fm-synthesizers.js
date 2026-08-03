@@ -7,7 +7,7 @@
 ## Product summary
 
 <!-- generated:product-summary -->
-A 26.1 KB gzipped browser FM synthesizer with 10 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 26.8 KB gzipped browser FM synthesizer with 19 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 ## Bundle
@@ -18,11 +18,11 @@ A 26.1 KB gzipped browser FM synthesizer with 10 curated patches and 40 document
 | `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
-| `packages/core/src/presets.js` | 6,499 B | 1,959 B |
+| `packages/core/src/presets.js` | 11,235 B | 2,695 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **26,745 B (26.1 KB)** |
+| **total** | | **27,481 B (26.8 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **43%**.
+Budget is 60 KB gzipped for the whole library — currently **44%**.
 <!-- /generated:bundle -->
 
 ## Alias suppression (the M1 gate)
@@ -56,12 +56,13 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 <!-- generated:roster -->
 | group | patches |
 |---|---:|
-| keys | 5 |
-| pluck | 2 |
+| keys | 7 |
+| pluck | 4 |
+| bass | 3 |
+| pad | 2 |
+| lead | 2 |
 | brass | 1 |
-| bass | 1 |
-| pad | 1 |
-| **total** | **10** |
+| **total** | **19** |
 <!-- /generated:roster -->
 
 ## Audio-thread budget
@@ -70,6 +71,6 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **21.6 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 4.6x |
+| audio-thread budget used | **21.2 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 4.7x |
 <!-- /generated:bench -->

@@ -1,6 +1,6 @@
 import type { Engine, ParamName } from "./index.js";
 
-export type PresetGroup = "keys" | "brass";
+export type PresetGroup = "keys" | "brass" | "bass" | "pluck" | "pad" | "lead";
 
 export interface Preset {
   label: string;

@@ -17,6 +17,15 @@ mapping is checked by `scripts/verify/check_intents.py`.
 | `fb-pad` | yes | yes |
 | `stack-keys` | yes | yes |
 | `twang` | yes | yes |
+| `marimba` | yes | yes |
+| `steel-drums` | yes | yes |
+| `organ` | yes | yes |
+| `piano-fm` | yes | yes |
+| `brass-lead` | yes | yes |
+| `calliope` | yes | yes |
+| `strings` | yes | yes |
+| `sub-bass` | yes | yes |
+| `pluck-bass` | yes | yes |
 
 The roster is the classic FM signatures, named without the brand (trademark policy binds
 hardest for FM — see `agentic-docs/licensing.md`).

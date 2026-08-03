@@ -99,21 +99,25 @@ export const PATTERNS = {
 /** Which riff suits which patch. The e-piano wants stabs, a bell wants an arp. */
 export const PATTERN_FOR = {
   "e-piano-fm":"house-stabs", "warm-keys":"ballad", "bell":"arp-classic",
-  "glass-bell":"ambient-drift", "stack-keys":"anthem",
+  "glass-bell":"ambient-drift", "stack-keys":"anthem", "organ":"ballad",
+  "piano-fm":"funk-clav",
 
-  "breathy-brass":"brass-hits",
+  "breathy-brass":"brass-hits", "brass-lead":"brass-hits",
 
-  "fm-bass":"funk-octaves",
+  "fm-bass":"funk-octaves", "sub-bass":"dub-slow", "pluck-bass":"slap-funk",
 
   "metal-pluck":"slap-funk", "twang":"funk-clav",
+  "marimba":"arp-classic", "steel-drums":"anthem",
 
-  "fb-pad":"pad-progression",
+  "fb-pad":"pad-progression", "strings":"pad-progression",
+
+  "calliope":"chip-melody",
 };
 
 /** Group fallback, so a new patch always has something to play. */
 const GROUP_DEFAULT = {
   keys:"house-stabs", brass:"brass-hits", bass:"funk-octaves",
-  pluck:"funk-clav", pad:"pad-progression",
+  pluck:"funk-clav", pad:"pad-progression", lead:"chip-melody",
 };
 
 export function patternFor(key, group) {

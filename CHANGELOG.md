@@ -20,7 +20,8 @@ First public version. `npm install`, three lines, a synthesizer.
 - 4× oversampled rendering with a two-stage half-band decimator; the final stage is a sharper 127-tap filter so FM's infinite sideband series stays below the alias gate.
 - Per-voice character: bounded pitch drift (a slow random walk) and envelope-time jitter, so a chord breathes instead of phase-locking.
 - Ensemble chorus, ping-pong delay with tone control, and stereo feedback-delay-network reverb, wired into the patch definitions.
-- A curated bank of 10 patches with explicit prior-intent provenance: e-piano-fm, warm-keys, bell, glass-bell, breathy-brass, fm-bass, metal-pluck, fb-pad, stack-keys, twang.
+- A curated bank of 19 patches with explicit prior-intent provenance: e-piano-fm, warm-keys, bell, glass-bell, stack-keys, organ, piano-fm, breathy-brass, brass-lead, fm-bass, sub-bass, pluck-bass, metal-pluck, marimba, steel-drums, twang, fb-pad, strings, calliope. The classic FM sound families — mallets (1:4 ratio), drawbar organ (1:2:3 stack), metallic pans (inharmonic ratios), pure leads, and held pads.
+- Reverb is used sparingly and only where the tail is the sound: rhythm patches (bass, plucks) are dry; bells and pads carry the wet. The bank averages ~0.20 reverbMix.
 
 ### Verification
 

@@ -14,7 +14,7 @@ const x = instance.exports;
 
 // Notes a patch is actually played at. Judging a sub-bass at C6 or a bell at C2 measures
 // the wrong thing; each group is levelled where it lives.
-const NOTE = { keys: 60, brass: 55 };
+const NOTE = { keys: 60, brass: 55, bass: 36, pluck: 60, pad: 55, lead: 72 };
 
 /** BS.1770-style K-weighting: high shelf then high-pass, both 2nd order at 48 kHz. */
 function kWeight(a) {

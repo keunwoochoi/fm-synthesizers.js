@@ -1,7 +1,7 @@
 # Patch intent: piano-fm
 
 Preset: `piano-fm`
-Status: proposed
+Status: implemented
 Provenance: prior
 Written: 2026-08-02
 

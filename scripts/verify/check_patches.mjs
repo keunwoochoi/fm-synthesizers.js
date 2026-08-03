@@ -33,8 +33,14 @@ const check = (ok, name, detail) => {
   if (!ok) { fails.push(name); console.log(`  FAIL  ${name} — ${detail}`); }
 };
 
+/** The register each patch family actually lives in, mirroring render_patches.mjs.
+ * A bass measured at MIDI 48 (C4, an octave above its register) collapses every low
+ * 1:1 FM tone into the same fundamental-dominated blob -- the ear hears them apart
+ * where they live, so the distinctness fingerprint must measure there too. */
+const NOTE = { keys: 60, brass: 55, bass: 36, pluck: 60, pad: 55, lead: 72 };
+
 /** Render one patch: a held note, released partway, so attack AND tail are captured. */
-function render(name, seconds = 3.0, note = 48) {
+function render(name, seconds = 3.0, note = NOTE[PRESETS[name].group] ?? 48) {
   const e = x.engine_new(SR);
   const params = { ...DEFAULTS, ...PRESETS[name].params };
   for (const [k, v] of Object.entries(params)) {
