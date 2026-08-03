@@ -7,6 +7,25 @@ context on every task, and the constitution has a hard line budget for exactly t
 Every amendment states what the old rule got wrong, quotes the owner verbatim where a decision was
 theirs, and carries a **Sync Impact Report** naming the artifacts it must propagate to.
 
+### 2.1.0 — 2026-08-03 — The HUMAN-block gate is removed
+
+**Owner, verbatim:** *"That CI with the human block is f——ed up. Remove it."* And, on propagating it here: *"If we have the same f——ing CI stupid humor block in other repository, we should remove them from other places too."* (Expletives elided; the emphasis is the owner's and is preserved.)
+
+**What the old rule got wrong.** The gate required every PR body to carry a non-empty `## HUMAN:` section and instructed agents never to write it, so an agent-authored PR could not reach mergeable state until the owner returned to type prose. It contradicts the premise of the amendment that shipped alongside it: 2.0.0 rebuilt CI around a repository the owner had stepped back from, replacing unattended monitoring with change-driven and manually dispatched runs precisely because alerts with no response owner are waste. A required check only the owner can clear applies that same anti-pattern to every change — CI was made change-driven so the repo could sleep, and this gate made every change wait for a person.
+
+The gate also mistook the location of the record. Owner reasoning is preserved verbatim and dated in this ledger, which is the single source for it; a per-PR prose box duplicates that into a second, weaker surface.
+
+**New rule.** There is no `HUMAN:` block. PR bodies keep the sections that carry engineering content — what changed, validation bound to an exact SHA, the process trace, and the abandoned-routes row. The required `ci.yml` contexts are `build-and-audit`, `e2e`, and `bundlers`.
+
+**Adopted from the sibling.** This is `subtractive-synthesizers.js` amendment 2.1.0, applied here because the gate was copied across siblings along with the rest of the harness. Per the no-shared-engine principle the removal is duplicated deliberately rather than extracted.
+
+**Sync Impact Report** — artifacts this amendment must propagate to:
+- `.github/workflows/ci.yml` — **required and done**: the `human-block` job is deleted.
+- `.github/pull_request_template.md` — **required and done**: the `## HUMAN:` section and the header instruction to keep it are removed.
+- `AGENTS.md` and `CLAUDE.md` § GitHub workflow — **required and done**: the bullet forbidding agents from filling the block is removed.
+- GitHub `main` branch protection — **required**: `human-block` is dropped from the required contexts, leaving three. Enforcement for administrators is unchanged.
+- `PRINCIPLES.md` amendment index and version header — **required and done**.
+
 ### 2.0.0 — 2026-08-03 — Bootstrap ends: PR CI is required, weekly monitoring is retired
 
 **Owner, verbatim:** *“Why do you make it a weekly job? Why not just make it mandatory for every PR? Especially because I will not actively working on this repository anymore. So a weekly job sounds like a waste.”*
