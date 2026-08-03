@@ -176,8 +176,8 @@ Budget is 60 KB gzipped for the whole library — currently **44%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **15.4 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 6.5x |
+| audio-thread budget used | **16.9 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 5.9x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -238,6 +238,8 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 <!-- /generated:harness-stats -->
 
 Rules are enforced as hooks, generated artifacts, or failing tests rather than prose alone. That includes deliberately broken fixtures proving the audit can fail for the defect it claims to catch.
+
+CI is **change-driven and required**: every pull request must pass the `ci.yml` checks (build + audit, e2e, bundlers) before merge, enforced by the server-side branch rule on `main`. The bootstrap direct-to-`main` exception ended when the package reached release readiness (PRINCIPLES amendment 2.0.0), and the inherited weekly harness-rot schedule was retired — this repository is dormant between changes, so validation runs when it changes, not on an unattended clock. The same audit runs locally via the pre-commit hook and can be re-run at any time with `npm run audit:harness`.
 
 - [`PRINCIPLES.md`](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/PRINCIPLES.md) — project constitution.
 - [`AGENTS.md`](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/AGENTS.md) — operating rules and task routing.
