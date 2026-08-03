@@ -98,7 +98,7 @@ try {
     const ctx = new OfflineAudioContext({ numberOfChannels: 2, length: 48000, sampleRate: 48000 });
     const engine = await createEngine({ context: ctx,
       initialEvents: [{ type: "noteOn", note: 60, vel: 0.9, at: 0 }] });
-    applyPreset(engine, "supersaw");
+    applyPreset(engine, "e-piano-fm");
     const buf = await ctx.startRendering();
     const ch = buf.getChannelData(0);
     let peak = 0, sum = 0, bad = 0;

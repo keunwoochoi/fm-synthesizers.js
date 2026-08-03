@@ -50,6 +50,7 @@
         font-size:12px;white-space:nowrap;background:#0e1218;color:var(--dim)}
   .node b{display:block;font-size:12.5px;color:var(--ink);font-weight:600}
   .node.audio{border-color:var(--audio)} .node.audio b{color:var(--audio)}
+  .node.mod{border-color:var(--mod)} .node.mod b{color:var(--mod)}
   .node.fx{border-color:var(--fx)} .node.fx b{color:var(--fx)}
   .arrow{color:var(--dim);padding:0 9px;font-size:14px}
   .mods{display:flex;gap:0;margin-top:9px;min-width:560px;align-items:flex-start}
@@ -68,7 +69,7 @@
   .stage > h3{margin:0 0 9px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
               color:var(--dim);font-weight:600}
   .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:12px}
-  .stage.modulation .panels{grid-template-columns:repeat(5,minmax(185px,1fr));gap:8px;
+  .stage.modulation .panels{grid-template-columns:repeat(4,minmax(185px,1fr));gap:8px;
                            overflow-x:auto;padding-bottom:2px}
   .stage.modulation .panel{padding:11px 10px}
   .stage.modulation .panel h2{font-size:10.5px}
@@ -171,20 +172,19 @@
 <div class="main-inner">
   <div class="flow">
     <div class="chain">
-      <div class="node audio"><b>OSC</b>saw / pulse / tri<br>+ sub + noise</div>
+      <div class="node mod"><b>MODULATORS</b>op1 · op3<br>sine · ratio × pitch</div>
       <div class="arrow">──▶</div>
-      <div class="node audio"><b>FILTER</b>ladder / diode / SVF</div>
+      <div class="node audio"><b>CARRIERS</b>op2 · op4<br>algorithm · mod1 / mod2 / stack2 / feedback</div>
       <div class="arrow">──▶</div>
-      <div class="node audio"><b>VCA</b>level</div>
+      <div class="node audio"><b>VCA</b>gain</div>
       <div class="arrow">──▶</div>
       <div class="node fx"><b>FX</b>chorus ▸ delay ▸ reverb</div>
       <div class="arrow">──▶</div>
       <div class="node"><b>OUT</b>limiter</div>
     </div>
     <div class="mods">
-      <div class="modline">▲ LFO → pitch, PWM</div>
-      <div class="modline">▲ LFO → cutoff &nbsp;▲ filter env → cutoff &nbsp;▲ velocity → cutoff</div>
-      <div class="modline">▲ amp env</div>
+      <div class="modline">▲ index → modulator depth &nbsp;▲ velocity → index</div>
+      <div class="modline">▲ op1..op4 envs → operator level &nbsp;▲ feedback → op1 self-modulation</div>
     </div>
     <div class="legend">
       <i class="a">audio path — carries sound</i>
@@ -194,89 +194,77 @@
     </div>
   </div>
 
-  <div class="stage">
-    <h3>1 · Audio path</h3>
+  <div class="stage modulation">
+    <h3>1 · Operators</h3>
     <div class="panels">
-      <div class="panel audio">
-        <h2>Oscillator</h2>
-        <div class="row"><label>shape</label>
-          <select id="shape" data-param></select></div>
-        <div class="row"><label>unison</label><input type="range" id="unison" data-param><output></output></div>
-        <div class="row"><label>detune</label><input type="range" id="detuneCents" data-param><output></output></div>
-        <div class="row"><label>pulse w</label><input type="range" id="pulseWidth" data-param><output></output></div>
-        <div class="row"><label>osc</label><input type="range" id="oscLevel" data-param><output></output></div>
-        <div class="row"><label>sub</label><input type="range" id="subLevel" data-param><output></output></div>
-        <div class="row"><label>noise</label><input type="range" id="noiseLevel" data-param><output></output></div>
-        <div class="row"><label>white → pink</label><input type="range" id="noiseColor" data-param><output></output></div>
-        <div class="row"><label>sync</label><input type="range" id="syncRatio" data-param><output></output></div>
-        <div class="row"><label>width</label><input type="range" id="stereoWidth" data-param><output></output></div>
-        <div class="row"><label>glide</label><input type="range" id="glide" data-param><output></output></div>
+      <div class="panel mod">
+        <h2>Op 1</h2>
+        <p class="to">modulator · drives <b>op2</b> (or itself in feedback)</p>
+        <div class="row"><label>ratio</label><input type="range" id="op1Ratio" data-param><output></output></div>
+        <div class="row"><label>level</label><input type="range" id="op1Level" data-param><output></output></div>
+        <div class="row"><label>attack</label><input type="range" id="op1Attack" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="op1Decay" data-param><output></output></div>
+        <div class="row"><label>sustain</label><input type="range" id="op1Sustain" data-param><output></output></div>
+        <div class="row"><label>release</label><input type="range" id="op1Release" data-param><output></output></div>
       </div>
 
-      <div class="panel audio">
-        <h2>Filter</h2>
-        <p class="to">where the character is — driven by <b>filter env</b>, <b>LFO</b>, <b>velocity</b></p>
-        <div class="row"><label>type</label>
-          <select id="filterKind" data-param></select></div>
-        <div class="row"><label>cutoff</label><input type="range" id="cutoffHz" data-param><output></output></div>
-        <div class="row"><label>resonance</label><input type="range" id="resonance" data-param><output></output></div>
-        <div class="row"><label>drive</label><input type="range" id="drive" data-param><output></output></div>
-        <div class="row"><label>env amt</label><input type="range" id="envAmount" data-param><output></output></div>
-        <div class="row"><label>vel amt</label><input type="range" id="velToCutoff" data-param><output></output></div>
-        <div class="row"><label>key trk</label><input type="range" id="keyTrack" data-param><output></output></div>
+      <div class="panel mod">
+        <h2>Op 2</h2>
+        <p class="to">carrier · the operator you actually hear</p>
+        <div class="row"><label>ratio</label><input type="range" id="op2Ratio" data-param><output></output></div>
+        <div class="row"><label>level</label><input type="range" id="op2Level" data-param><output></output></div>
+        <div class="row"><label>attack</label><input type="range" id="op2Attack" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="op2Decay" data-param><output></output></div>
+        <div class="row"><label>sustain</label><input type="range" id="op2Sustain" data-param><output></output></div>
+        <div class="row"><label>release</label><input type="range" id="op2Release" data-param><output></output></div>
       </div>
 
-      <div class="panel audio">
-        <h2>Amp</h2>
-        <p class="to">final level — driven by <b>amp env</b> and velocity</p>
-        <div class="row"><label>output</label><input type="range" id="gain" data-param><output></output></div>
+      <div class="panel mod">
+        <h2>Op 3</h2>
+        <p class="to">modulator · the 2nd voice in <b>mod2</b> and <b>stack2</b></p>
+        <div class="row"><label>ratio</label><input type="range" id="op3Ratio" data-param><output></output></div>
+        <div class="row"><label>level</label><input type="range" id="op3Level" data-param><output></output></div>
+        <div class="row"><label>attack</label><input type="range" id="op3Attack" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="op3Decay" data-param><output></output></div>
+        <div class="row"><label>sustain</label><input type="range" id="op3Sustain" data-param><output></output></div>
+        <div class="row"><label>release</label><input type="range" id="op3Release" data-param><output></output></div>
+      </div>
+
+      <div class="panel mod">
+        <h2>Op 4</h2>
+        <p class="to">carrier · the 2nd pair in <b>stack2</b></p>
+        <div class="row"><label>ratio</label><input type="range" id="op4Ratio" data-param><output></output></div>
+        <div class="row"><label>level</label><input type="range" id="op4Level" data-param><output></output></div>
+        <div class="row"><label>attack</label><input type="range" id="op4Attack" data-param><output></output></div>
+        <div class="row"><label>decay</label><input type="range" id="op4Decay" data-param><output></output></div>
+        <div class="row"><label>sustain</label><input type="range" id="op4Sustain" data-param><output></output></div>
+        <div class="row"><label>release</label><input type="range" id="op4Release" data-param><output></output></div>
       </div>
     </div>
   </div>
 
-  <div class="stage modulation">
-    <h3>2 · Modulation</h3>
+  <div class="stage">
+    <h3>2 · Algorithm</h3>
     <div class="panels">
-      <div class="panel mod">
-        <h2>Filter envelope</h2>
-        <p class="to">→ <b>cutoff</b>, scaled by the filter's <b>env amt</b></p>
-        <div class="row"><label>attack</label><input type="range" id="fltAttack" data-param><output></output></div>
-        <div class="row"><label>decay</label><input type="range" id="fltDecay" data-param><output></output></div>
-        <div class="row"><label>sustain</label><input type="range" id="fltSustain" data-param><output></output></div>
-        <div class="row"><label>release</label><input type="range" id="fltRelease" data-param><output></output></div>
+      <div class="panel audio">
+        <h2>Algorithm</h2>
+        <p class="to">how the four operators connect — which modulate, which carry</p>
+        <div class="row"><label>algorithm</label>
+          <select id="algorithm" data-param></select></div>
       </div>
 
-      <div class="panel mod">
-        <h2>Amp envelope</h2>
-        <p class="to">→ <b>VCA</b> — the shape of a note in time</p>
-        <div class="row"><label>attack</label><input type="range" id="ampAttack" data-param><output></output></div>
-        <div class="row"><label>decay</label><input type="range" id="ampDecay" data-param><output></output></div>
-        <div class="row"><label>sustain</label><input type="range" id="ampSustain" data-param><output></output></div>
-        <div class="row"><label>release</label><input type="range" id="ampRelease" data-param><output></output></div>
+      <div class="panel audio">
+        <h2>Mod index</h2>
+        <p class="to">how hard the modulators push the carrier — the <b>drive</b> of FM</p>
+        <div class="row"><label>index</label><input type="range" id="index" data-param><output></output></div>
+        <div class="row"><label>feedback</label><input type="range" id="feedback" data-param><output></output></div>
+        <div class="row"><label>vel → idx</label><input type="range" id="velToIndex" data-param><output></output></div>
       </div>
 
-      <div class="panel mod">
-        <h2>Pitch envelope</h2>
-        <p class="to">→ <b>pitch</b>, once per note</p>
-        <div class="row"><label>amount</label><input type="range" id="pitchEnvAmount" data-param><output></output></div>
-        <div class="row"><label>decay</label><input type="range" id="pitchEnvDecay" data-param><output></output></div>
-      </div>
-
-      <div class="panel mod">
-        <h2>LFO 2 · per note</h2>
-        <p class="to">→ <b>cutoff</b>, <b>pitch</b> — restarts on every note</p>
-        <div class="row"><label>rate</label><input type="range" id="lfo2Rate" data-param><output></output></div>
-        <div class="row"><label>→ cutoff</label><input type="range" id="lfo2ToCutoff" data-param><output></output></div>
-        <div class="row"><label>→ pitch</label><input type="range" id="lfo2ToPitch" data-param><output></output></div>
-      </div>
-
-      <div class="panel mod">
-        <h2>LFO 1 · shared</h2>
-        <p class="to">→ <b>pitch</b>, <b>cutoff</b>, <b>pulse width</b> — free-running</p>
-        <div class="row"><label>rate</label><input type="range" id="lfoRate" data-param><output></output></div>
-        <div class="row"><label>→ pitch</label><input type="range" id="lfoToPitch" data-param><output></output></div>
-        <div class="row"><label>→ cutoff</label><input type="range" id="lfoToCutoff" data-param><output></output></div>
-        <div class="row"><label>→ pulse w</label><input type="range" id="lfoToPwm" data-param><output></output></div>
+      <div class="panel audio">
+        <h2>Output</h2>
+        <p class="to">final level before the FX send chain</p>
+        <div class="row"><label>gain</label><input type="range" id="gain" data-param><output></output></div>
       </div>
     </div>
   </div>
@@ -349,9 +337,9 @@
 import { createEngine, PARAMETERS } from "../../packages/core/src/index.js";
 import { PRESETS, DEFAULTS, GROUPS } from "../../packages/core/src/presets.js";
 
-const FILTER_LABELS = {
-  ladderLp: "ladder LP · 24 dB", diodeLp: "diode LP · acid", svfLp: "SVF LP · 12 dB",
-  svfBp: "SVF bandpass", svfHp: "SVF highpass", svfNotch: "SVF notch",
+const ALGORITHM_LABELS = {
+  mod1: "mod1 · carrier + 1 mod", mod2: "mod2 · carrier + 2 mods",
+  stack2: "stack2 · two stacked pairs", feedback: "feedback · op1 self-mod",
 };
 
 // Parameter controls carry ids and layout only. Their bounds, increments, defaults, and
@@ -368,7 +356,7 @@ for (const el of document.querySelectorAll("[data-param]")) {
     for (const [name, value] of Object.entries(definition.values)) {
       const option = document.createElement("option");
       option.value = String(value);
-      option.textContent = FILTER_LABELS[name] ?? name;
+      option.textContent = ALGORITHM_LABELS[name] ?? name;
       el.appendChild(option);
     }
     el.value = String(definition.default);
@@ -594,7 +582,7 @@ for (const el of document.querySelectorAll("input[type=range]")) {
     if (el.hasAttribute("data-param")) engine?.setParam(el.id, Number(el.value));
   });
 }
-for (const id of ["shape", "filterKind"]) {
+for (const id of ["algorithm"]) {
   document.getElementById(id).addEventListener("change", (e) =>
     engine?.setParam(id, Number(e.target.value)));
 }
@@ -623,8 +611,8 @@ globalThis.__playground = { down, up, arp, loadPreset, get engine() { return eng
 // than in the showcase is to see how it is built and then change it.
 const presetSel = document.getElementById("preset");
 let currentPresetKey = null;
-const GROUP_LABEL = { bass: "Bass", lead: "Lead", pad: "Pad & atmosphere",
-                      pluck: "Keys & pluck", brass: "Brass & stab" };
+const GROUP_LABEL = { keys: "Keys", brass: "Brass", bass: "Bass",
+                      pluck: "Pluck", pad: "Pad & atmosphere" };
 for (const g of GROUPS) {
   const entries = Object.entries(PRESETS).filter(([, p]) => p.group === g);
   if (!entries.length) continue;
@@ -749,7 +737,7 @@ function ensureEngine() {
     for (const [name, value] of Object.entries(params)) e.setParam(name, value);
     for (const el of document.querySelectorAll("input[type=range][data-param]"))
       e.setParam(el.id, Number(el.value));
-    for (const id of ["shape", "filterKind"])
+    for (const id of ["algorithm"])
       e.setParam(id, Number(document.getElementById(id).value));
     status.textContent = "";
     showDiag();

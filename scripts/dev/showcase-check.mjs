@@ -39,8 +39,8 @@ try {
   await p.goto(`http://127.0.0.1:${PORT}/apps/playground/showcase.html`, { timeout: 15000 });
 
   // Derived from the preset bank, not hardcoded: a magic number here means adding a
-  // patch silently stops being verified. Caught when the supersaw took the count to 7
-  // and the check still asserted 6.
+  // patch silently stops being verified. Caught in the sibling when the supersaw took
+  // the count to 7 and the check still asserted 6.
   const { PRESETS } = await import("../../packages/core/src/presets.js");
   const expected = Object.keys(PRESETS).length;
   const cards = await p.locator(".card").count();
@@ -115,7 +115,7 @@ try {
 
   // A patch name is the primary audition gesture: it must initialize the engine and
   // start transport, not merely move a highlight while the page remains silent.
-  await p.locator('.card[data-key="warm-pad"] h3').click();
+  await p.locator('.card[data-key="bell"] h3').click();
   await p.waitForFunction(() => document.getElementById("sr").textContent !== "—",
                           null, { timeout: 20000 });
   await p.waitForFunction(() => document.getElementById("play").textContent.includes("Stop"));
@@ -166,7 +166,7 @@ try {
   const before = await highlighted();
   if (before.length !== 1) fail(`expected exactly 1 selected card at load, got ${before}`);
 
-  for (const key of ["warm-pad", "acid", "crystal", "brass-stab"]) {
+  for (const key of ["e-piano-fm", "fm-bass", "glass-bell", "breathy-brass", "fb-pad"]) {
     await p.locator(`.card[data-key="${key}"]`).click();
     await p.waitForTimeout(220);
     const on = await highlighted();

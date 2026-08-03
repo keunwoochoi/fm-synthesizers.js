@@ -95,28 +95,47 @@ try {
   // engine were written, every slider would still show the previous patch and the editor
   // would be lying about the sound it is making.
   const readCtl = () => p.evaluate(() => ({
-    cutoff: document.getElementById("cutoffHz").value,
-    unison: document.getElementById("unison").value,
-    filter: document.getElementById("filterKind").value,
+    index: document.getElementById("index").value,
+    op1Ratio: document.getElementById("op1Ratio").value,
+    algorithm: document.getElementById("algorithm").value,
     blurb: document.getElementById("presetBlurb").textContent,
   }));
-  const sub = await p.evaluate(() => { window.__playground.loadPreset("sub-bass"); }).then(readCtl);
-  const sup = await p.evaluate(() => { window.__playground.loadPreset("supersaw"); }).then(readCtl);
-  if (sub.cutoff === sup.cutoff) fail(`loading a patch did not move cutoff (${sub.cutoff})`);
-  if (sub.unison === sup.unison) fail(`loading a patch did not move unison (${sub.unison})`);
-  if (!sup.blurb) fail("loading a patch did not show its description");
-  if (Number(sup.unison) !== 7) fail(`supersaw should load unison 7, got ${sup.unison}`);
+  const bell = await p.evaluate(() => { window.__playground.loadPreset("bell"); }).then(readCtl);
+  const pad = await p.evaluate(() => { window.__playground.loadPreset("fb-pad"); }).then(readCtl);
+  if (bell.index === pad.index) fail(`loading a patch did not move index (${bell.index})`);
+  if (bell.op1Ratio === pad.op1Ratio) fail(`loading a patch did not move op1Ratio (${bell.op1Ratio})`);
+  if (!bell.blurb) fail("loading a patch did not show its description");
+  if (Number(bell.index) !== 1.1) fail(`bell should load index 1.1, got ${bell.index}`);
 
-  // The filter selector is a <select>, not a range, so it takes a separate code path
-  // to the engine. Exercising every kind here catches a wiring break that would
-  // otherwise only show up as "the filter menu does nothing".
-  for (let k = 0; k < 6; k++) {
-    await p.selectOption("#filterKind", String(k));
+  // The ratio is a range control, taking the input path to the engine. Sweep it across
+  // the editor's range and prove the engine accepts a value past the editor ceiling
+  // (op1Ratio's supported range reaches 8; the control stops at 4). An "unknown
+  // parameter" on any of these means the editor and engine have drifted apart.
+  for (let r = 0.5; r <= 4.0001; r += 0.5) {
+    await p.evaluate((v) => {
+      const el = document.getElementById("op1Ratio");
+      el.value = String(v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, r);
+    await p.waitForTimeout(40);
+  }
+  const ratioErr = errs.filter((e) => /unknown parameter|op1Ratio/.test(e));
+  if (ratioErr.length) fail("op1Ratio wiring: " + ratioErr[0]);
+  await p.evaluate(() => { window.__playground.engine.setParam("op1Ratio", 8); });
+  await p.waitForTimeout(60);
+  const deepErr = errs.filter((e) => /unknown parameter/.test(e));
+  if (deepErr.length) fail("engine rejected a valid op1Ratio: " + deepErr[0]);
+
+  // The algorithm selector is a <select>, not a range, so it takes a separate code path
+  // to the engine. Exercising every algorithm here catches a wiring break that would
+  // otherwise only show up as "the algorithm menu does nothing".
+  for (let k = 0; k < 4; k++) {
+    await p.selectOption("#algorithm", String(k));
     await p.waitForTimeout(60);
   }
-  const kindErr = errs.filter((e) => /unknown parameter|filterKind/.test(e));
-  if (kindErr.length) fail("filter type wiring: " + kindErr[0]);
+  const algErr = errs.filter((e) => /unknown parameter|algorithm/.test(e));
+  if (algErr.length) fail("algorithm wiring: " + algErr[0]);
 
   if (errs.length) fail("page errors: " + errs.slice(0, 3).join(" | "));
-  console.log("ARP OK — cycles held notes, respects mode and octave range, stops cleanly; all 6 filter types wire through; patch bank loads into the controls");
+  console.log("ARP OK — cycles held notes, respects mode and octave range, stops cleanly; index/op1Ratio/algorithm all wire through; patch bank loads into the controls");
 } finally { await b.close(); server.kill(); }

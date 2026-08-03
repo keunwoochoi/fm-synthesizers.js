@@ -85,11 +85,11 @@ try {
     fail("keyboard dock moved or left the viewport while controls scrolled");
   if (layout.statusRightGap < -1 || layout.statusRightGap > 16)
     fail(`runtime status is not at the patch bar's right edge (gap ${layout.statusRightGap})`);
-  if (layout.modulation.length !== 5 ||
+  if (layout.modulation.length !== 4 ||
       Math.max(...layout.modulation.map((panel) => panel.top)) -
       Math.min(...layout.modulation.map((panel) => panel.top)) > 1 ||
       layout.modulation.some((panel) => panel.width < 184))
-    fail(`modulation panels are not one usable row: ${JSON.stringify(layout.modulation)}`);
+    fail(`operator panels are not one usable row: ${JSON.stringify(layout.modulation)}`);
   if (layout.panels !== layout.randomizers)
     fail(`expected one randomizer per panel, found ${layout.randomizers}/${layout.panels}`);
   const [editorView, showcaseView] = layout.views;
@@ -108,33 +108,33 @@ try {
 
   // A randomizer changes only its panel. Selecting the same base patch through the
   // custom marker restores every public value, including demo-only arpeggiator state.
-  await page.evaluate(() => window.__playground.loadPreset("analog-bass"));
+  await page.evaluate(() => window.__playground.loadPreset("e-piano-fm"));
   const values = (panel) => panel.locator("input, select").evaluateAll((controls) =>
     Object.fromEntries(controls.map((control) => [control.id, control.value])));
-  const oscillator = page.locator(".panel.audio").nth(0);
-  const filter = page.locator(".panel.audio").nth(1);
-  const oscBefore = await values(oscillator);
-  const filterBefore = await values(filter);
-  await oscillator.locator(".randomize").click();
-  const oscRandom = await values(oscillator);
-  const filterRandom = await values(filter);
-  if (JSON.stringify(oscRandom) === JSON.stringify(oscBefore)) fail("oscillator randomizer changed nothing");
-  if (JSON.stringify(filterRandom) !== JSON.stringify(filterBefore))
-    fail("oscillator randomizer changed the filter panel");
+  const algoPanel = page.locator(".panel.audio").nth(0);
+  const drivePanel = page.locator(".panel.audio").nth(1);
+  const algoBefore = await values(algoPanel);
+  const driveBefore = await values(drivePanel);
+  await algoPanel.locator(".randomize").click();
+  const algoRandom = await values(algoPanel);
+  const driveRandom = await values(drivePanel);
+  if (JSON.stringify(algoRandom) === JSON.stringify(algoBefore)) fail("algorithm randomizer changed nothing");
+  if (JSON.stringify(driveRandom) !== JSON.stringify(driveBefore))
+    fail("algorithm randomizer changed the mod-index panel");
   if (await page.locator("#preset").inputValue() !== "__custom" ||
       await page.locator("#preset option[data-custom]").count() !== 1)
     fail("randomizing a panel did not expose the choose-a-patch reset path");
-  await page.selectOption("#preset", "analog-bass");
-  if (JSON.stringify(await values(oscillator)) !== JSON.stringify(oscBefore) ||
+  await page.selectOption("#preset", "e-piano-fm");
+  if (JSON.stringify(await values(algoPanel)) !== JSON.stringify(algoBefore) ||
       await page.locator("#preset option[data-custom]").count())
-    fail("choosing the base patch did not restore randomized oscillator values");
+    fail("choosing the base patch did not restore randomized algorithm values");
 
   const arpeggiator = page.locator(".panel.play");
   const arpBefore = await values(arpeggiator);
   await arpeggiator.locator(".randomize").click();
   if (JSON.stringify(await values(arpeggiator)) === JSON.stringify(arpBefore))
     fail("arpeggiator randomizer changed nothing");
-  await page.selectOption("#preset", "analog-bass");
+  await page.selectOption("#preset", "e-piano-fm");
   if (JSON.stringify(await values(arpeggiator)) !== JSON.stringify(arpBefore))
     fail("choosing a patch did not restore randomized arpeggiator values");
 
@@ -205,7 +205,7 @@ try {
 
   // Default patch, plus one from each group -- a silent patch in one category would
   // otherwise hide behind a loud default.
-  for (const patch of [null, "analog-bass", "supersaw", "warm-pad", "clav", "brass-stab"]) {
+  for (const patch of [null, "e-piano-fm", "breathy-brass", "fm-bass", "twang", "fb-pad"]) {
     const { before, during } = await measure(patch);
     const name = patch ?? "(default)";
     console.log(`  ${name.padEnd(13)} idle ${before.toFixed(4)}  playing ${during.toFixed(4)}`);
