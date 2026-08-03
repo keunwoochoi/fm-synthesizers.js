@@ -9,7 +9,7 @@ of process cost, not a gate.
 
 | session | date (UTC) | opencode | model | cost USD | tokens total | owner msgs | agent msgs | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 1.0303 | 287,531,356 | 5 | 679 | 709 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 1.1019 | 311,261,980 | 9 | 716 | 742 |
 
 The `tokens total` column is input + output + reasoning + cache-read + cache-write for
 the session. It is the rough budget consumed, not a billable figure; the cost column is
@@ -33,6 +33,11 @@ The owner sent four messages across the whole build. What each asked for:
 5. **Taste on the sound.** Listening feedback: too much reverb on average; grow the
    roster with the classic FM recipes. Result: reverb to ~0.20 average, bank 10 -> 19
    distinct patches.
+6. **How to ship.** Asked for the CLI steps to release to npm.
+7. **CI repair follow-through.** A separate session (Codex) fixed the CI; update the
+   README to match. Verified the required-per-PR rule, documented it, merged via PR.
+8. **Release.** Published `fm-synthesizers.js@0.1.0` to npm; created GitHub release
+   `v0.1.0`.
 
 ## How to record a session
 
