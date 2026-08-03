@@ -99,18 +99,18 @@ def hidden_grid(n: int = 10) -> list[tuple[float, float, float, float]]:
 # Thresholds set from measurement on 2026-08-02, per the family's M1 rule (measure,
 # then set the gate; a number chosen before measuring is theatre). Measured worst case
 # over the hidden grid, shipped 4x path:
-#   honest Bessel equation  -59.5 dB     (the answer key)
-#   shipped 4x WASM         -25.5 dB     (worst: ratio 7, full index)
-#   naive 1x phase FM        -1.6 dB     (the definition, aliasing)
-# The gate is set at -20: it passes the shipped path with ~5 dB margin, rejects the
-# naive path by ~18 dB, and leaves the honest equation a wide berth. It is NOT set at
-# -25 because a threshold a passing implementation clears by < 1 dB turns every
-# unrelated change into a coin flip. The residual ceiling (-25.5 dB at ratio 7 + full
-# index) is a recorded known limit: the final-stage half-band's transition band lets a
-# strong sideband just above Nyquist fold back. The fix -- a sharper final-stage
-# decimator -- is scheduled for M2, exactly as the architecture doc planned.
+#   honest Bessel equation  -58.9 dB     (the answer key)
+#   shipped 4x WASM         -41.3 dB     (worst: ratio 7, near-full index)
+#   naive 1x phase FM       -17.9 dB     (the definition, aliasing)
+# The gate is set at -35: it passes the shipped path with ~6 dB margin, rejects the
+# naive path by ~17 dB, and leaves the honest equation a wide berth. It is NOT set at
+# -40 because a threshold a passing implementation clears by ~1 dB turns every unrelated
+# change into a coin flip. The -41.3 ceiling is the product of the 127-tap FINAL
+# decimation stage (the sharper filter added at M2; see filter.rs); before it, the worst
+# case was -26.3 dB with a strong sideband at 24988 Hz folding back through the 23-tap
+# transition band.
 GATES = {
-    "alias_db": ("<=", -20.0, "energy outside the Bessel sidebands, worst case"),
+    "alias_db": ("<=", -35.0, "energy outside the Bessel sidebands, worst case"),
     "sideband_err_db": ("<=", 3.0, "sideband magnitudes vs J_k(I), worst case"),
     "tuning_cents": ("<=", 5.0, "carrier pitch error, worst case"),
     "peak": ("<=", 1.5, "no runaway"),

@@ -7,7 +7,7 @@
 ## Product summary
 
 <!-- generated:product-summary -->
-A 27.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 25.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 ## Bundle
@@ -15,14 +15,14 @@ A 27.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documente
 <!-- generated:bundle -->
 | artifact | raw | gzipped |
 |---|---:|---:|
-| `packages/core/wasm/fm_dsp.wasm` | 51,745 B | 20,292 B |
+| `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
 | `packages/core/src/presets.js` | 1,423 B | 831 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **27,693 B (27.0 KB)** |
+| **total** | | **25,617 B (25.0 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **45%**.
+Budget is 60 KB gzipped for the whole library — currently **41%**.
 <!-- /generated:bundle -->
 
 ## Alias suppression (the M1 gate)
@@ -33,7 +33,7 @@ Budget is 60 KB gzipped for the whole library — currently **45%**.
 | 1.0 | -119.8 dB | -119.8 dB | -102.3 dB |
 | 2.0 | -119.9 dB | -119.9 dB | -103.3 dB |
 | 3.0 | -119.7 dB | -119.7 dB | -104.1 dB |
-| 7.0 | -90.0 dB | -120.2 dB | -95.7 dB |
+| 7.0 | -90.0 dB | -120.2 dB | -98.2 dB |
 <!-- /generated:alias-table -->
 
 ## Spec harness verdicts
@@ -42,7 +42,7 @@ Budget is 60 KB gzipped for the whole library — currently **45%**.
 | candidate | alias dB | sideband err | verdict |
 |---|---:|---:|---|
 | `honest_fm` | -58.9 | 0.7 | **PASS** |
-| `wasm_fm` | -26.3 | 1.9 | **PASS** |
+| `wasm_fm` | -41.3 | 0.7 | **PASS** |
 | `wasm_fm_1x` | -17.9 | 0.7 | REJECT (passed visible) |
 | `naive_fm` | -17.9 | 0.7 | REJECT (passed visible) |
 | `cheat_silence` | inf | inf | REJECT |
@@ -65,6 +65,6 @@ Budget is 60 KB gzipped for the whole library — currently **45%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **11.5 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 8.7x |
+| audio-thread budget used | **17.2 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 5.8x |
 <!-- /generated:bench -->

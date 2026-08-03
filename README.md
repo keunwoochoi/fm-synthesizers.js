@@ -8,7 +8,7 @@
 [![license](https://img.shields.io/npm/l/fm-synthesizers.js.svg)](LICENSE-MIT)
 
 <!-- generated:product-summary -->
-A 27.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 25.0 KB gzipped browser FM synthesizer with 0 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 [npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)
@@ -144,23 +144,24 @@ For deterministic offline rendering, pass an `OfflineAudioContext` and `initialE
 
 - This is a browser AudioWorklet library, not a Node audio renderer, DAW, sequencer, arpeggiator, sampler, Web MIDI adapter, or plugin format.
 - Chromium and Playwright WebKit are blocking release targets. Firefox and direct mobile-device performance tiers are not currently release gates.
-- The alias gate is set from measurement at M1, per the family rule. The 4× path passes across the shipped index range; the residual worst case (a strong sideband just above Nyquist at high ratio and full index, ~-25 dB) is recorded in the verification design doc, and a sharper final-stage decimator is scheduled for M2.
 - The voice pool steals the oldest voice when exhausted. Under load the engine degrades by shedding a voice rather than increasing its fixed allocation.
 - `setParam()` rejects unknown names, but callers are responsible for keeping values inside the exported `PARAMETERS` ranges.
+
+Alias suppression is a hard CI gate with the shipped 4× path clearing -35 dB worst case across the ratio/index grid; the residual ceiling sits below -40 dB and is driven by the final-stage decimation filter (see `scripts/verify/verify_spec.py` and `crates/dsp/src/filter.rs`).
 
 ## Size
 
 <!-- generated:bundle -->
 | artifact | raw | gzipped |
 |---|---:|---:|
-| `packages/core/wasm/fm_dsp.wasm` | 51,745 B | 20,292 B |
+| `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
 | `packages/core/src/presets.js` | 1,423 B | 831 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **27,693 B (27.0 KB)** |
+| **total** | | **25,617 B (25.0 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **45%**.
+Budget is 60 KB gzipped for the whole library — currently **41%**.
 <!-- /generated:bundle -->
 
 ## Runtime cost
@@ -169,8 +170,8 @@ Budget is 60 KB gzipped for the whole library — currently **45%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **11.5 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 8.7x |
+| audio-thread budget used | **21.3 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 4.7x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -183,7 +184,7 @@ An FM carrier/modulator pair has an exact closed-form spectrum — sidebands at 
 | candidate | alias dB | sideband err | verdict |
 |---|---:|---:|---|
 | `honest_fm` | -58.9 | 0.7 | **PASS** |
-| `wasm_fm` | -26.3 | 1.9 | **PASS** |
+| `wasm_fm` | -41.3 | 0.7 | **PASS** |
 | `wasm_fm_1x` | -17.9 | 0.7 | REJECT (passed visible) |
 | `naive_fm` | -17.9 | 0.7 | REJECT (passed visible) |
 | `cheat_silence` | inf | inf | REJECT |
@@ -202,7 +203,7 @@ An FM carrier/modulator pair has an exact closed-form spectrum — sidebands at 
 | 1.0 | -119.8 dB | -119.8 dB | -102.3 dB |
 | 2.0 | -119.9 dB | -119.9 dB | -103.3 dB |
 | 3.0 | -119.7 dB | -119.7 dB | -104.1 dB |
-| 7.0 | -90.0 dB | -120.2 dB | -95.7 dB |
+| 7.0 | -90.0 dB | -120.2 dB | -98.2 dB |
 <!-- /generated:alias-table -->
 
 ## Patch intent coverage

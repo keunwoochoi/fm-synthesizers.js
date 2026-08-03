@@ -47,7 +47,8 @@ pub struct Engine {
     probe_fc: f32,
     probe_ratio: f32,
     probe_index: f32,
-    probe_hb: [filter::HalfBand; 2],
+    probe_hb: [filter::HalfBand; 1],
+    probe_hb_final: filter::HalfBandFinal,
     probe_os: bool,
     chorus: Chorus,
     chorus_rate: f32,
@@ -80,7 +81,8 @@ impl Engine {
             probe_fc: -1.0,
             probe_ratio: 1.0,
             probe_index: 0.5,
-            probe_hb: [filter::HalfBand::new(); 2],
+            probe_hb: [filter::HalfBand::new(); 1],
+            probe_hb_final: filter::HalfBandFinal::new(),
             probe_os: true,
             chorus: Chorus::new(),
             chorus_rate: 0.6,
@@ -370,9 +372,9 @@ pub unsafe extern "C" fn render_osc(p: *mut Engine, hz: f32, ratio: f32, index: 
                                     frames: u32) {
     let e = eng!(p);
     let n = (frames as usize).min(MAX_BLOCK);
-    /// Match the SHIPPED signal path: the probe runs at 4x and decimates, exactly as
-    /// the voices do. A probe that renders the pair at 1x measures a path no listener
-    /// ever hears, and the alias gate would then be grading a non-product.
+    // Match the SHIPPED signal path: the probe runs at 4x and decimates, exactly as
+    // the voices do. A probe that renders the pair at 1x measures a path no listener
+    // ever hears, and the alias gate would then be grading a non-product.
     let rate = if e.probe_os { e.sr * 4.0 } else { e.sr };
     if e.probe_fc != hz || e.probe_ratio != ratio || e.probe_index != index {
         e.probe_fc = hz;
@@ -403,7 +405,7 @@ pub unsafe extern "C" fn render_osc(p: *mut Engine, hz: f32, ratio: f32, index: 
             let d = e.probe[1].tick(m4);
             let ab = e.probe_hb[0].decimate(a, b);
             let cd = e.probe_hb[0].decimate(c, d);
-            e.out_l[i] = e.probe_hb[1].decimate(ab, cd);
+            e.out_l[i] = e.probe_hb_final.decimate(ab, cd);
         }
     } else {
         for i in 0..n {
@@ -425,6 +427,7 @@ pub unsafe extern "C" fn probe_oversample(p: *mut Engine, on: u32) {
     e.probe_os = on != 0;
     e.probe_fc = -1.0;
     for hb in e.probe_hb.iter_mut() { hb.reset(); };
+    e.probe_hb_final.reset();
 }
 
 /// Restart the measurement oscillator's phase. Called once before a probe run.
@@ -437,4 +440,5 @@ pub unsafe extern "C" fn probe_reset(p: *mut Engine) {
     e.probe = [op::Operator::new(); 2];
     e.probe_fc = -1.0;
     for hb in e.probe_hb.iter_mut() { hb.reset(); };
+    e.probe_hb_final.reset();
 }

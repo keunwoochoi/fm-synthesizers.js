@@ -5,7 +5,7 @@
 //! The classic FM signatures (electric-piano-ish, bell, breathy brass) are known
 //! combinations of those, and this module is the machine that produces them.
 
-use crate::filter::HalfBand;
+use crate::filter::{HalfBand, HalfBandFinal};
 use crate::op::Operator;
 
 /// Four operators cover the classic 2-op and 4-op signatures. The roster needs no more.
@@ -75,14 +75,26 @@ pub struct Voice {
     pub active: bool,
     pub age: u32,
     ops: [Operator; MAX_OPS],
-    /// Decimators for the 4x-oversampled path (4x -> 2x, then 2x -> 1x).
-    pub hb: [HalfBand; 2],
+    /// Decimators for the 4x-oversampled path (4x -> 2x, then 2x -> 1x). The FIRST
+    /// stage uses the cheap 23-tap; the FINAL stage is the sharper 127-tap, because the
+    /// final 2x->1x decimation is where a strong sideband just above 24 kHz folds back
+    /// into the audible band (measured: -21.6 dB at 23012 Hz for a ratio-7 patch at
+    /// full index; the 127-tap attenuates the folded source by -23 dB vs -8 dB).
+    pub hb: [HalfBand; 1],
+    pub hb_final: HalfBandFinal,
     /// The previous output sample of the feedback operator, for self-modulation.
     fb_last: f32,
     f0: f32,
     vel: f32,
-    /// Per-voice drift, so a chord does not phase-lock into a cheap-sounding block.
+    /// Per-voice drift: a slow bounded random walk in cents, so a chord breathes
+    /// instead of phase-locking. FM operators lock even more readily than a VCO
+    /// bank, so this matters more here, not less.
     drift_cents: f32,
+    drift_target: f32,
+    drift_seed: u32,
+    /// Per-voice envelope-time jitter: a fixed per-note offset applied to operator
+    /// envelope times, so two voices of the same patch do not attack in lockstep.
+    env_jitter: f32,
 }
 
 impl Voice {
@@ -92,11 +104,15 @@ impl Voice {
             active: false,
             age: 0,
             ops: [Operator::new(); MAX_OPS],
-            hb: [HalfBand::new(); 2],
+            hb: [HalfBand::new(); 1],
+            hb_final: HalfBandFinal::new(),
             fb_last: 0.0,
             f0: 440.0,
             vel: 1.0,
             drift_cents: 0.0,
+            drift_target: 0.0,
+            drift_seed: 1,
+            env_jitter: 0.0,
         }
     }
 
@@ -107,14 +123,18 @@ impl Voice {
         self.vel = vel.clamp(0.0, 1.0);
         self.f0 = midi_to_hz(note as f32);
         self.hb[0].reset();
-        self.hb[1].reset();
+        self.hb_final.reset();
 
-        // Per-voice drift: a slow bounded random walk in cents, so a chord breathes
-        // instead of phase-locking. FM operators lock even more readily than a VCO
-        // bank, so this matters more here, not less.
+        // Per-voice character, seeded from the engine so no two voices share a drift
+        // path. Bounded: drift stays inside ~+-4 cents, the walk target re-rolls within
+        // it, and envelope times jitter by a fixed +-4% per voice.
         let mut s = seed.wrapping_mul(2654435761).wrapping_add(note as u32);
         s ^= s << 13; s ^= s >> 17; s ^= s << 5;
-        self.drift_cents = (s as f32 / u32::MAX as f32 - 0.5) * 6.0;
+        self.drift_seed = s;
+        self.drift_cents = (s as f32 / u32::MAX as f32 - 0.5) * 4.0;
+        self.drift_target = self.drift_cents;
+        s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+        self.env_jitter = (s as f32 / u32::MAX as f32 - 0.5) * 0.04;
 
         for i in 0..MAX_OPS {
             // Random start phases: operators that begin aligned add into one loud
@@ -122,7 +142,8 @@ impl Voice {
             s ^= s << 13; s ^= s >> 17; s ^= s << 5;
             self.ops[i].set_phase(s as f32 / u32::MAX as f32);
             let (a, d, ss, r) = patch.adsr[i];
-            self.ops[i].env.set(a, d, ss, r, sr);
+            let j = 1.0 + self.env_jitter;
+            self.ops[i].env.set(a * j, d * j, ss, r * j, sr);
             self.ops[i].env.gate_on();
         }
         self.fb_last = 0.0;
@@ -130,7 +151,26 @@ impl Voice {
         self.update_freqs(patch, sr);
     }
 
+    /// Advance the drift random walk. Called once per voice tick, and each tick is one
+    /// of the four 4x-rate samples per output sample -- so at 48 kHz this fires 192 kHz,
+    /// and a re-roll chance of 1/48000 retargets the walk about every 0.25 s. A chord of
+    /// N voices then has N independent bounded walks instead of one shared pitch wobble.
+    #[inline]
+    fn step_drift(&mut self) {
+        self.drift_seed = self.drift_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        let dice = self.drift_seed as f32 / u32::MAX as f32;
+        if dice < 1.0 / 48_000.0 {
+            // Hash again so the target is a full-range draw, not the truncated top of
+            // the same seed. The first version used (seed >> 8), which caps the draw at
+            // ~0.0625 and biases every target toward the negative edge of the bound.
+            self.drift_seed = self.drift_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            self.drift_target = (self.drift_seed as f32 / u32::MAX as f32 - 0.5) * 8.0;
+        }
+        self.drift_cents += (self.drift_target - self.drift_cents) * 0.0001;
+    }
+
     fn update_freqs(&mut self, patch: &Patch, sr: f32) {
+        self.step_drift();
         let drift = cents(self.drift_cents);
         for i in 0..MAX_OPS {
             self.ops[i].set_freq(self.f0 * patch.ratio[i] * drift, sr);
@@ -144,12 +184,13 @@ impl Voice {
     }
 
     /// Decimate four 4x-rate samples down to one 1x-rate sample, via two half-band
-    /// stages (4x -> 2x -> 1x). Each stage removes the upper octave of its input.
+    /// stages (4x -> 2x with the cheap 23-tap, 2x -> 1x with the sharper 127-tap).
+    /// Each stage removes the upper octave of its input.
     #[inline]
     pub fn decimate4(&mut self, a: f32, b: f32, c: f32, d: f32) -> f32 {
         let ab = self.hb[0].decimate(a, b);
         let cd = self.hb[0].decimate(c, d);
-        self.hb[1].decimate(ab, cd)
+        self.hb_final.decimate(ab, cd)
     }
 
     /// Render one output sample at the OVER- (or under-) sampled rate.

@@ -331,6 +331,69 @@ console.log("engine checks (shipped WASM)\n");
   check(same, "the engine is deterministic run to run");
 }
 
+// --- analog character: voices are NOT bit-identical, but the drift stays bounded.
+// PRINCIPLES: "controlled imperfection, and is it controlled". Two sequential chords
+// on one engine draw different per-voice drift paths (the engine seed advances), so
+// the renders must differ. The BOUND is checked on the pitch directly: the carrier of
+// a note must stay within +-5 cents of the requested frequency across repeated notes,
+// because a drift that wanders further is an out-of-tune synth, not a breathing one.
+// (A waveform-level comparison would measure per-note random phase, which is a real
+// and desired behaviour, not drift -- so the bound is measured where drift lives.)
+{
+  const e = x.engine_new(SR);
+  x.set_param(e, P.algorithm, 0);
+  x.set_param(e, P.index, 0.5);
+  x.set_param(e, P.op1Level, 0.0);   // carrier only: pitch = f0 * drift, cleanly
+  x.set_param(e, P.op2Sustain, 0.9);
+  x.set_param(e, P.op1Ratio, 1.0);
+  x.set_param(e, P.op2Ratio, 1.0);
+  const renderNote = (note) => {
+    x.note_on(e, note, 0.9);
+    const n = SR;
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i += 128) {
+      const f = Math.min(128, n - i);
+      x.render(e, f);
+      out.set(new Float32Array(x.memory.buffer, x.out_ptr(e), f), i);
+    }
+    x.all_off(e);
+    return out;
+  };
+  const fundOf = (a) => {
+    // Sub-sample zero-crossing pitch: interpolate each RISING crossing with linear
+    // interpolation (rising-only, so each span is a full period, not a half), so a
+    // short window's cycle-count quantization does not swamp the +-5 cent drift being
+    // measured.
+    const from = Math.floor(SR * 0.3), N = SR;
+    const crossings = [];
+    let prev = a[from], prevI = from;
+    for (let i = from + 1; i < from + N; i++) {
+      const v = a[i];
+      if (prev <= 0 && v > 0) {                // rising crossing only
+        const t = prev / (prev - v);
+        crossings.push(prevI + t);
+      }
+      prev = v; prevI = i;
+    }
+    if (crossings.length < 4) return 0;
+    const spans = [];
+    for (let i = 1; i < crossings.length; i++) spans.push(crossings[i] - crossings[i - 1]);
+    const sorted = [...spans].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    return SR / median;                        // Hz
+  };
+  const cents = (f, f0) => 1200 * Math.log2(f / f0);
+  const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+  const a = fundOf(renderNote(48)), b = fundOf(renderNote(48));
+  const f0 = midi(48);
+  check(a !== b, "repeated notes are not identical (per-voice drift)",
+        `f0 ${a.toFixed(2)} Hz vs ${b.toFixed(2)} Hz`);
+  check(Math.abs(cents(a, f0)) < 5 && Math.abs(cents(b, f0)) < 5,
+        "drift stays within +-5 cents of the note",
+        `${cents(a, f0).toFixed(2)} and ${cents(b, f0).toFixed(2)} cents`);
+  x.engine_free(e);
+}
+
 console.log();
 if (fails.length) {
   console.log(`ENGINE CHECKS FAIL — ${fails.length}: ${fails.join(", ")}`);
