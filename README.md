@@ -299,7 +299,7 @@ instruction, or correction — and *agent turns* is the agent's replies plus too
 
 | session | model | opencode | cost USD | tokens total | owner exchanges | agent turns | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 1.0303 | 287,531,356 | 5 | 679 | 709 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 1.1019 | 311,261,980 | 9 | 716 | 742 |
 
 `tokens total` is input + output + reasoning + cache-read for the session — the rough
 budget consumed, not a billable figure. `cost USD` is the number the provider actually
@@ -327,10 +327,17 @@ The owner talked to the agent four times over the whole build. What each turn as
    recipes (mallets, drawbar organ, steel pans, pure leads). Result: reverb pulled back
    to ~0.20 average with dry rhythm patches, and the bank grown from 10 to 19
    genuinely distinct patches.
+6. **How to ship.** Asked for the CLI steps to release to npm.
+7. **CI repair follow-through.** Told the agent a separate session (Codex) had fixed the
+   CI — retiring the weekly harness-rot job and making the checks required per PR — and
+   asked to update the README to match. Verified the server-side rule, documented the
+   change-driven model, and merged it through the new required-CI PR process.
+8. **Release.** Published `fm-synthesizers.js@0.1.0` to npm and created the GitHub
+   release `v0.1.0`.
 
 The point of the table is not to celebrate the number; it is to make the cost of this
 way of working visible and checkable. The session it describes is the entire build from
-empty directory to release-ready package.
+empty directory to a published npm package.
 
 ## License
 
