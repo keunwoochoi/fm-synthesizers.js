@@ -9,7 +9,7 @@ of process cost, not a gate.
 
 | session | date (UTC) | opencode | model | cost USD | tokens total | owner msgs | agent msgs | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 0.7016 | 207,211,756 | 4 | 546 | 577 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 0.7400 | 220,090,379 | 4 | 569 | 600 |
 
 The `tokens total` column is input + output + reasoning + cache-read + cache-write for
 the session. It is the rough budget consumed, not a billable figure; the cost column is

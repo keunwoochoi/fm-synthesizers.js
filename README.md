@@ -175,8 +175,8 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **17.7 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 5.7x |
+| audio-thread budget used | **17.3 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 5.8x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -296,7 +296,7 @@ instruction, or correction — and *agent turns* is the agent's replies plus too
 
 | session | model | opencode | cost USD | tokens total | owner exchanges | agent turns | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 0.70 | 207,211,756 | 4 | 546 | 577 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 0.7400 | 220,090,379 | 4 | 569 | 600 |
 
 `tokens total` is input + output + reasoning + cache-read for the session — the rough
 budget consumed, not a billable figure. `cost USD` is the number the provider actually
