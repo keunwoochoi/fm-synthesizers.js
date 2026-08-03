@@ -18,9 +18,9 @@ A 26.1 KB gzipped browser FM synthesizer with 10 curated patches and 40 document
 | `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
-| `packages/core/src/presets.js` | 6,497 B | 1,961 B |
+| `packages/core/src/presets.js` | 6,499 B | 1,959 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **26,747 B (26.1 KB)** |
+| **total** | | **26,745 B (26.1 KB)** |
 
 Budget is 60 KB gzipped for the whole library — currently **43%**.
 <!-- /generated:bundle -->
@@ -70,6 +70,6 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **17.1 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 5.8x |
+| audio-thread budget used | **21.6 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 4.6x |
 <!-- /generated:bench -->

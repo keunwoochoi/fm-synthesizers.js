@@ -162,9 +162,9 @@ Alias suppression is a hard CI gate with the shipped 4× path clearing -35 dB wo
 | `packages/core/wasm/fm_dsp.wasm` | 45,836 B | 18,216 B |
 | `packages/core/src/index.js` | 7,870 B | 2,815 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
-| `packages/core/src/presets.js` | 6,497 B | 1,961 B |
+| `packages/core/src/presets.js` | 6,499 B | 1,959 B |
 | `packages/core/worklet/processor.js` | 5,766 B | 2,169 B |
-| **total** | | **26,747 B (26.1 KB)** |
+| **total** | | **26,745 B (26.1 KB)** |
 
 Budget is 60 KB gzipped for the whole library — currently **43%**.
 <!-- /generated:bundle -->
@@ -175,8 +175,8 @@ Budget is 60 KB gzipped for the whole library — currently **43%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **17.3 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 5.8x |
+| audio-thread budget used | **19.6 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 5.1x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -222,7 +222,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 | exactly mapped implemented intents | 10 |
 | written before implementation | 10 |
 | reconstructed after implementation | 0 |
-| proposed before implementation | 0 |
+| proposed before implementation | 10 |
 <!-- /generated:intent-coverage -->
 
 ## Harness
