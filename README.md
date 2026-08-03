@@ -231,7 +231,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 <!-- generated:harness-stats -->
 | | |
 |---|---|
-| harness audit assertions | 22 |
+| harness audit assertions | 23 |
 | Python harness/spec tests | 20 |
 | public metadata/README tests | 9 |
 | deliberately-broken fixtures | 8 |
