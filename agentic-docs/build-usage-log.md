@@ -13,11 +13,12 @@ of process cost, not a gate.
 
 The `tokens total` column is input + output + reasoning + cache-read + cache-write for
 the session. It is the rough budget consumed, not a billable figure; the cost column is
-the number the model's provider actually charges.
+the number the model's provider actually charges. Wall clock for the session (first to
+last message): **19 h 32 m**.
 
 ## The exchanges, summarized
 
-The owner sent four messages across the whole build. What each asked for:
+The owner sent nine messages across the whole build. What each asked for:
 
 1. **Start the sibling, and instrument the build itself.** Read the knowledge base and
    the shipped siblings, then build `fm-synthesizers.js` — and this time record token

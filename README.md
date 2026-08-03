@@ -293,21 +293,29 @@ hype are long gone, and what remains is a genuinely distinct way to shape a spec
 This library was built by a coding agent working with the owner in one continuous
 session, and the cost of that is recorded here rather than remembered. Numbers are
 generated from the session database by `scripts/usage/usage-log.py`; the table below is
-a point-in-time snapshot at 0.1.0 and drifts as the project moves on. The column
-*exchanges* is the number of messages the owner sent the agent — every intervention,
-instruction, or correction — and *agent turns* is the agent's replies plus tool calls.
+a point-in-time snapshot at 0.1.0 and drifts as the project moves on. *Owner exchanges*
+is the number of messages the owner sent the agent — every intervention, instruction,
+or correction — and *agent turns* is the agent's replies plus tool calls.
 
-| session | model | opencode | cost USD | tokens total | owner exchanges | agent turns | tool calls |
-|---|---:|---|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 1.1019 | 311,261,980 | 9 | 716 | 742 |
+| metric | value |
+|---|---:|
+| model | deepseek-v4-flash (opencode-go) |
+| opencode | 1.18.11 |
+| cost USD | 1.10 |
+| tokens total | 311,261,980 |
+| wall clock | 19 h 32 m |
+| owner exchanges | 9 |
+| agent turns | 716 |
+| tool calls | 742 |
 
 `tokens total` is input + output + reasoning + cache-read for the session — the rough
 budget consumed, not a billable figure. `cost USD` is the number the provider actually
-charges.
+charges. Wall clock is the elapsed time from the session's first message to its last —
+the build happened inside that window, not continuously across it.
 
 ### The exchanges, summarized
 
-The owner talked to the agent four times over the whole build. What each turn asked for:
+The owner talked to the agent nine times over the whole build. What each turn asked for:
 
 1. **Start the sibling, and instrument the build itself.** Read the knowledge base and
    the shipped siblings, then build `fm-synthesizers.js` — and this time record the token
