@@ -176,8 +176,8 @@ Budget is 60 KB gzipped for the whole library — currently **44%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **21.9 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 4.6x |
+| audio-thread budget used | **21.4 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 4.7x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -297,7 +297,7 @@ instruction, or correction — and *agent turns* is the agent's replies plus too
 
 | session | model | opencode | cost USD | tokens total | owner exchanges | agent turns | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 0.7400 | 220,090,379 | 4 | 569 | 600 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | deepseek-v4-flash (opencode-go) | 1.18.11 | 1.0303 | 287,531,356 | 5 | 679 | 709 |
 
 `tokens total` is input + output + reasoning + cache-read for the session — the rough
 budget consumed, not a billable figure. `cost USD` is the number the provider actually
@@ -320,6 +320,11 @@ The owner talked to the agent four times over the whole build. What each turn as
    agentic-build-log section in the README with a per-turn summary, and make sure the
    demo pages are actually live — and keep the patches and demos FM-shaped rather than
    reusing subtractive's.
+5. **Taste on the sound.** Listening feedback: the patches had too much reverb on
+   average, and the roster should grow with more of the classic, well-documented FM
+   recipes (mallets, drawbar organ, steel pans, pure leads). Result: reverb pulled back
+   to ~0.20 average with dry rhythm patches, and the bank grown from 10 to 19
+   genuinely distinct patches.
 
 The point of the table is not to celebrate the number; it is to make the cost of this
 way of working visible and checkable. The session it describes is the entire build from

@@ -9,7 +9,7 @@ of process cost, not a gate.
 
 | session | date (UTC) | opencode | model | cost USD | tokens total | owner msgs | agent msgs | tool calls |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 0.7400 | 220,090,379 | 4 | 569 | 600 |
+| `ses_03b61b243ffegicMyoGpn2wxxv` | 2026-08-02 | 1.18.11 | deepseek-v4-flash (opencode-go) | 1.0303 | 287,531,356 | 5 | 679 | 709 |
 
 The `tokens total` column is input + output + reasoning + cache-read + cache-write for
 the session. It is the rough budget consumed, not a billable figure; the cost column is
@@ -30,6 +30,9 @@ The owner sent four messages across the whole build. What each asked for:
    the subtractive `[-]` in blue), its own dark-purple demo theme, an agentic-build-log
    README section with a per-turn summary, live demo pages, and FM-shaped patches and
    demos rather than subtractive's.
+5. **Taste on the sound.** Listening feedback: too much reverb on average; grow the
+   roster with the classic FM recipes. Result: reverb to ~0.20 average, bank 10 -> 19
+   distinct patches.
 
 ## How to record a session
 
