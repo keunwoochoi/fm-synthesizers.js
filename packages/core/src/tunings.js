@@ -141,6 +141,13 @@ const HEADER = [
   ["octaveDegree", "scale degree to treat as the formal octave"],
 ];
 
+// `Number()` is not a decimal parser: it also accepts `0x1B8`, `0b101` and `0o660`, which
+// read as 440, 5 and 432 Hz respectively. Nothing in a tuning file is written that way, so
+// accepting them can only turn a corrupt line into a plausible frequency -- the same
+// silent misread as a ratio with no denominator, in the one field that anchors every other
+// key's pitch. An exponent is allowed because "floating point" normally implies one.
+const DECIMAL = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+
 function intField(row, label, min) {
   const token = row.text.trim().split(/\s+/)[0];
   if (!/^[+-]?\d+$/.test(token) || (min !== undefined && Number(token) < min)) {
@@ -164,7 +171,7 @@ export function parseKeyboardMapping(text) {
     }
     const token = row.text.trim().split(/\s+/)[0];
     const hz = Number(token);
-    if (!Number.isFinite(hz) || hz <= 0) {
+    if (!DECIMAL.test(token) || !Number.isFinite(hz) || hz <= 0) {
       fail(row.line, `${label} must be a positive number of hertz, got "${token}"`);
     }
     map[field] = hz;

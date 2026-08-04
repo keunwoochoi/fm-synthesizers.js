@@ -411,6 +411,20 @@ for (const [what, text] of [
   });
 }
 
+test("kbm: a reference frequency is decimal, not whatever Number() will swallow", () => {
+  // Same class as a ratio with no denominator: `Number()` also parses 0x/0b/0o literals,
+  // so a corrupt line reads as a plausible frequency instead of an error -- in the one
+  // field every other key's pitch is anchored to. 0x1B8 is 440, 0o660 is 432, 0b101 is 5.
+  for (const bad of ["0x1B8", "0b101", "0o660", "440abc", "", "-440", "0"]) {
+    assert.throws(() => parseKeyboardMapping(kbm(0, { referenceFrequency: bad })),
+      /reference frequency must be a positive number of hertz/, `"${bad}" must be rejected`);
+  }
+  for (const [good, hz] of [["440.0", 440], ["432", 432], ["4.4e2", 440], ["261.6255653", 261.6255653]]) {
+    assert.equal(parseKeyboardMapping(kbm(0, { referenceFrequency: good })).referenceFrequency, hz,
+      `"${good}" must still parse`);
+  }
+});
+
 test("kbm: degrees may be negative and may lie outside the scale", () => {
   const mapping = parseKeyboardMapping(
     kbm(3, { middleKey: 60, referenceKey: 60, octaveDegree: 3 }, ["-2", "0", "7"]));
