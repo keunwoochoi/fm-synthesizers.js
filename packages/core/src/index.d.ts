@@ -5,7 +5,10 @@ export type { ParameterDefinition, ParamName } from "./parameters.js";
 /** An event applied at an absolute AudioContext time. */
 export interface ScheduledEvent {
   type: "noteOn" | "noteOff" | "allOff" | "param";
-  /** MIDI note number, for noteOn / noteOff. */
+  /**
+   * MIDI pitch, for noteOn / noteOff. Continuous, not an integer: 60 is middle C and
+   * 60.5 is the quarter-tone above it. Must be finite; anything else throws.
+   */
   note?: number;
   /** 0..1, for noteOn. */
   vel?: number;
@@ -31,9 +34,13 @@ export interface Engine {
   onError?: (error: Error) => void;
   /** Resume any non-running, non-closed context state, including WebKit's `interrupted`. Safe to call from a user gesture. */
   resume(): Promise<void>;
-  /** Start a note now. `note` is MIDI (60 = middle C), `vel` is 0..1. */
+  /**
+   * Start a note now. `note` is MIDI pitch (60 = middle C), `vel` is 0..1. Pitch is
+   * continuous, so any tuning is playable — `noteOn(69.5)` is the quarter-tone above
+   * A440. Outside 0..127 it is clamped; non-finite throws.
+   */
   noteOn(note: number, vel?: number): void;
-  /** Release a note now; its amp release still rings out. */
+  /** Release a note now, by the same pitch it was started with; its amp release still rings out. */
   noteOff(note: number): void;
   /** Release every sounding note, tails intact. */
   allOff(): void;

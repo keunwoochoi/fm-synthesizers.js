@@ -7,6 +7,15 @@ This file records what changed for **users of the package**. The engineering rec
 
 ## [Unreleased]
 
+### Added
+
+- `noteOn` and `noteOff` take a **fractional MIDI pitch**, so any tuning is playable: `noteOn(69.5)` is the quarter-tone above A440, and step *k* of an *n*-tone equal division of the octave is `69 + 12 * k / n`. Previously the value was truncated to an integer, and `noteOn(60.7)` sounded note 60.
+
+### Changed
+
+- A non-finite pitch now throws a `TypeError` instead of sounding something arbitrary. `noteOn(undefined)` used to play MIDI 0 in silence. Scheduled events and `createEngine({ initialEvents })` are checked the same way.
+- Pitch outside 0..127 is clamped at both ends. Negative input previously wrapped through the unsigned boundary and sounded MIDI 127.
+
 ## [0.1.0] — 2026-08-02
 
 First public version. `npm install`, three lines, a synthesizer.
