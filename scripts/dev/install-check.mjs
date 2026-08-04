@@ -94,20 +94,35 @@ try {
 <script type="module">
   import { createEngine } from "/node_modules/fm-synthesizers.js/dist/index.js";
   import { applyPreset } from "/node_modules/fm-synthesizers.js/dist/presets.js";
-  window.__result = (async () => {
+  const renderNote = async (note) => {
     const ctx = new OfflineAudioContext({ numberOfChannels: 2, length: 48000, sampleRate: 48000 });
     const engine = await createEngine({ context: ctx,
-      initialEvents: [{ type: "noteOn", note: 60, vel: 0.9, at: 0 }] });
+      initialEvents: [{ type: "noteOn", note, vel: 0.9, at: 0 }] });
     applyPreset(engine, "e-piano-fm");
-    const buf = await ctx.startRendering();
-    const ch = buf.getChannelData(0);
+    return (await ctx.startRendering()).getChannelData(0);
+  };
+  window.__result = (async () => {
+    const ch = await renderNote(60);
     let peak = 0, sum = 0, bad = 0;
     for (let i = 0; i < ch.length; i++) {
       const v = ch[i];
       if (!Number.isFinite(v)) { bad++; continue; }
       peak = Math.max(peak, Math.abs(v)); sum += v * v;
     }
-    return { peak, rms: Math.sqrt(sum / ch.length), bad };
+
+    // The fraction has to survive the PUBLISHED boundary, not only the source tree.
+    // Comparing 69 against 69.5 needs no pitch estimate and no tolerance: if the
+    // published worklet still truncated, both renders would be MIDI 69 and identical.
+    const a = await renderNote(69), b = await renderNote(69.5);
+    let differing = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) differing++;
+
+    // The rest of the boundary has to be reachable from the installed package too.
+    const ctx = new OfflineAudioContext({ numberOfChannels: 2, length: 128, sampleRate: 48000 });
+    const engine = await createEngine({ context: ctx });
+    const api = ["noteOn", "noteOff", "setNotePitch"].filter((k) => typeof engine[k] !== "function");
+
+    return { peak, rms: Math.sqrt(sum / ch.length), bad, differing, missing: api };
   })();
   window.__result.then(
     (value) => { window.__outcome = { ok: true, value }; },
@@ -159,8 +174,14 @@ try {
   if (result.bad) fail(`${result.bad} non-finite samples`);
   if (result.rms < 0.01) fail(`installed package produced silence — rms ${result.rms}`);
   if (result.peak > 1.0) fail(`clipped — peak ${result.peak}`);
+  if (result.missing.length) fail(`installed package is missing: ${result.missing.join(", ")}`);
+  // Zero differing samples means the published worklet truncated 69.5 to 69, which is
+  // exactly the defect the note boundary work removed and exactly the one a source-tree
+  // test cannot see.
+  if (!result.differing) fail("pitch 69.5 rendered identically to 69 — the fraction was truncated");
   console.log(`INSTALL OK [${BROWSER}] — packed, installed clean, resolved its own WASM ` +
-              `and worklet, and made a sound`);
+              `and worklet, made a sound, and sounded a fractional pitch ` +
+              `(${result.differing} of 48000 samples differ between 69 and 69.5)`);
 } catch (error) {
   if (error instanceof GateFailure) {
     console.error(error.message);

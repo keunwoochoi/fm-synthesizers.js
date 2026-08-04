@@ -96,7 +96,25 @@ No CDN, sample, or network request is made while playing. The only runtime fetch
 `PARAMETERS` is the authoritative metadata for all 40 controls; `PARAM`, `ALGORITHM`, `RATIOS`, preset defaults, declarations, the playground, and the parameter table below derive from it.
 <!-- /generated:api -->
 
-For deterministic offline rendering, pass an `OfflineAudioContext` and `initialEvents` to `createEngine()`, then call `context.startRendering()`. A live engine instead accepts `noteOn()`, `noteOff()`, `schedule()`, and `setParam()` messages after construction.
+For deterministic offline rendering, pass an `OfflineAudioContext` and `initialEvents` to `createEngine()`, then call `context.startRendering()`. A live engine instead accepts `noteOn()`, `noteOff()`, `setNotePitch()`, `schedule()`, and `setParam()` messages after construction.
+
+### Tunings other than twelve-tone
+
+Pitch is a continuous MIDI value rather than a note number, so a scale is just arithmetic — step *k* of an *n*-tone equal division of the octave is `69 + 12 * k / n`, and a ratio *r* against a reference is `69 + 12 * Math.log2(r)`.
+
+```js
+const edo = (k, n) => 69 + (12 * k) / n;
+for (let k = 0; k < 31; k++) engine.noteOn(edo(k, 31), 0.8);   // 31-EDO, one octave
+```
+
+Two notes at the same key in different tunings need a `noteId` each, because without one a repeated pitch retriggers a single voice:
+
+```js
+engine.noteOn(60, 0.8, 1);
+engine.noteOn(60.5, 0.8, 2);      // a quarter-tone apart, both sounding
+engine.setNotePitch(60.5, 60.25, 2);   // retune the second while it plays
+engine.noteOff(60, 1);
+```
 
 ## Parameters
 
@@ -177,8 +195,8 @@ Budget is 60 KB gzipped for the whole library — currently **47%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **16.9 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 5.9x |
+| audio-thread budget used | **16.6 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 6.0x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
