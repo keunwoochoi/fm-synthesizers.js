@@ -241,6 +241,28 @@ test("noteId is passed when given and absent when not", async () => {
     /noteId must be an integer/);
 });
 
+test("setNotePitch posts by pitch or by id, and validates both pitches", async () => {
+  const context = new MockContext("running");
+  const engine = await createEngine({ context, wasmUrl: "/engine.wasm", workletUrl: "/processor.js" });
+  const port = MockNode.instances[0].port;
+
+  engine.setNotePitch(69, 69.5);
+  assert.deepEqual(port.messages.at(-1), { type: "setNotePitch", note: 69, pitch: 69.5 });
+  assert.ok(!("noteId" in port.messages.at(-1)));
+  engine.setNotePitch(69, 69.5, 3);
+  assert.deepEqual(port.messages.at(-1), { type: "setNotePitch", note: 69, pitch: 69.5, noteId: 3 });
+
+  const sent = port.messages.length;
+  // BOTH pitches are validated: a NaN target is as damaging as a NaN start, and it would
+  // otherwise reach a voice that is already sounding.
+  assert.throws(() => engine.setNotePitch(NaN, 69.5), /pitch must be a finite number/);
+  assert.throws(() => engine.setNotePitch(69, NaN), /pitch must be a finite number/);
+  assert.throws(() => engine.setNotePitch(69, 69.5, -1), /noteId must be an integer/);
+  assert.throws(() => engine.schedule([{ type: "setNotePitch", note: 69, pitch: NaN, at: 1 }]),
+    /pitch must be a finite number/);
+  assert.equal(port.messages.length, sent, "a rejected retune must post nothing");
+});
+
 test("noteOn and resume recover interrupted and future non-running states but not closed", async () => {
   const context = new MockContext("interrupted");
   const engine = await createEngine({ context, wasmUrl: "/engine.wasm", workletUrl: "/processor.js" });

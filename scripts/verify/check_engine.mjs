@@ -583,6 +583,113 @@ console.log("engine checks (shipped WASM)\n");
   }
 }
 
+// --- retuning a sounding voice: the pitch moves, nothing else does.
+//
+// This is the operation every live-retuning protocol needs and this engine never had —
+// MTS single-note tuning change, MTS-ESP, MPE channel bend, MIDI 2.0 per-note pitch. It
+// is also plain pitch bend, which was unimplementable at any resolution before ids
+// existed, because there was no way to name the voice you wanted to change.
+{
+  const setup = (e) => {
+    x.set_param(e, P.algorithm, 0);
+    x.set_param(e, P.index, 0.5);
+    x.set_param(e, P.op1Level, 0.0);      // carrier only: op2 is the carrier in Mod1
+    x.set_param(e, P.op1Ratio, 1.0);
+    x.set_param(e, P.op2Ratio, 1.0);
+    x.set_param(e, P.op2Attack, 0.005);
+    x.set_param(e, P.op2Decay, 0.05);
+    x.set_param(e, P.op2Sustain, 0.9);
+    x.set_param(e, P.chorusMix, 0); x.set_param(e, P.delayMix, 0); x.set_param(e, P.reverbMix, 0);
+  };
+  const fundOf = (a, from, N) => {
+    const crossings = [];
+    let prev = a[from], prevI = from;
+    for (let i = from + 1; i < from + N; i++) {
+      const v = a[i];
+      if (prev <= 0 && v > 0) crossings.push(prevI + prev / (prev - v));
+      prev = v; prevI = i;
+    }
+    if (crossings.length < 4) return 0;
+    const spans = [];
+    for (let i = 1; i < crossings.length; i++) spans.push(crossings[i] - crossings[i - 1]);
+    return SR / spans.sort((a, b) => a - b)[Math.floor(spans.length / 2)];
+  };
+  const cents = (f, want) => 1200 * Math.log2(f / want);
+  const hzOf = (p) => 440 * Math.pow(2, (p - 69) / 12);
+  /** Render 2 s, applying `mid` exactly at 1.0 s. */
+  const renderWithRetune = (mid) => {
+    const e = x.engine_new(SR);
+    setup(e);
+    x.note_on(e, 69, 0.9);
+    const n = SR * 2, at = SR;
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i += 128) {
+      if (i >= at && i - 128 < at) mid(e);
+      x.render(e, 128);
+      out.set(new Float32Array(x.memory.buffer, x.out_ptr(e), 128), i);
+    }
+    x.engine_free(e);
+    return out;
+  };
+
+  const held = renderWithRetune(() => {});
+  const bent = renderWithRetune((e) => x.set_note_pitch(e, 69, 69.5));
+
+  const before = fundOf(bent, Math.floor(SR * 0.4), Math.floor(SR * 0.5));
+  const after = fundOf(bent, Math.floor(SR * 1.4), Math.floor(SR * 0.5));
+  check(Math.abs(cents(before, 440)) < 5, "before the retune the voice is at its start pitch",
+        `${before.toFixed(2)} Hz`);
+  check(Math.abs(cents(after, hzOf(69.5))) < 5, "after the retune the voice sounds the new pitch",
+        `${after.toFixed(2)} Hz vs ${hzOf(69.5).toFixed(2)} Hz wanted (${cents(after, hzOf(69.5)).toFixed(2)} cents)`);
+
+  // No re-attack: a retrigger would restart the amp envelope, so the level just after the
+  // retune would jump. Compared against the SAME patch held without a retune, which
+  // isolates the retune from the envelope's own decay.
+  const rms = (a, from, N) => {
+    let s = 0;
+    for (let i = from; i < from + N; i++) s += a[i] * a[i];
+    return Math.sqrt(s / N);
+  };
+  const w = Math.floor(SR * 0.02);
+  const pre = rms(bent, SR - w, w), post = rms(bent, SR + 128, w);
+  const heldPost = rms(held, SR + 128, w);
+  check(Math.abs(post / pre - 1) < 0.1, "the retune produces no attack transient",
+        `rms ${pre.toExponential(2)} -> ${post.toExponential(2)} across the boundary`);
+  check(Math.abs(post / heldPost - 1) < 0.1, "the retuned voice tracks the held voice's envelope",
+        `${post.toExponential(2)} vs ${heldPost.toExponential(2)} un-retuned`);
+
+  // Operator ratios follow the carrier: the whole spectrum scales by the pitch ratio,
+  // rather than the modulator staying behind and detuning the stack.
+  const cBefore = centroid(bent, Math.floor(SR * 0.5));
+  const cAfter = centroid(bent, Math.floor(SR * 1.5));
+  const want = hzOf(69.5) / hzOf(69);
+  check(Math.abs(cAfter / cBefore / want - 1) < 0.02,
+        "the spectrum scales with the new pitch (ratios track)",
+        `centroid ${cBefore.toFixed(1)} -> ${cAfter.toFixed(1)} Hz, ratio ${(cAfter / cBefore).toFixed(4)} vs ${want.toFixed(4)}`);
+
+  // An id that names nothing sounding is a no-op, not an error and not a stuck voice.
+  {
+    const e = x.engine_new(SR);
+    setup(e);
+    x.note_on_id(e, 60, 0.9, 5);
+    x.set_note_pitch_id(e, 999, 72);
+    x.render(e, 128);
+    check(x.active_voices(e) === 1, "retuning an unknown id disturbs nothing",
+          `${x.active_voices(e)} voices`);
+    x.note_off_id(e, 5);
+    for (let i = 0; i < SR; i += 128) x.render(e, 128);
+    x.set_note_pitch_id(e, 5, 72);       // released and finished: still a no-op
+    let finite = true;
+    for (let i = 0; i < SR / 4; i += 128) {
+      x.render(e, 128);
+      const view = new Float32Array(x.memory.buffer, x.out_ptr(e), 128);
+      for (let j = 0; j < 128; j++) if (!Number.isFinite(view[j])) { finite = false; break; }
+    }
+    check(finite, "retuning a finished id leaves no NaN behind");
+    x.engine_free(e);
+  }
+}
+
 // --- out-of-range pitch is clamped deliberately, at both ends.
 {
   const e = x.engine_new(SR);

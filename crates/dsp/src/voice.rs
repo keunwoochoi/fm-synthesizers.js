@@ -194,6 +194,23 @@ impl Voice {
         }
     }
 
+    /// Move a sounding voice to a new pitch, disturbing nothing else.
+    ///
+    /// Only `f0` changes. `update_freqs` recomputes every operator from it once per block,
+    /// so ratios and per-voice drift follow the new pitch by themselves — the stack stays
+    /// in tune with its carrier instead of detuning. Envelopes are not touched, so nothing
+    /// re-attacks; phases are not reset, so there is no click.
+    ///
+    /// Applied instantly, with no glide. That is right for a discrete retune — a scale
+    /// change, or an MTS single-note tuning message — and it will zipper under a
+    /// continuously-swept bend. Smoothing is deliberately not invented here; it needs a
+    /// ramp time nobody has chosen, and choosing one silently is the failure mode the
+    /// constitution names.
+    pub fn set_pitch(&mut self, pitch: f32) {
+        self.pitch = pitch;
+        self.f0 = midi_to_hz(pitch);
+    }
+
     pub fn release(&mut self) {
         for i in 0..MAX_OPS {
             self.ops[i].env.gate_off();

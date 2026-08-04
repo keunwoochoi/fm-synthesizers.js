@@ -8,7 +8,7 @@
 [![license](https://img.shields.io/npm/l/fm-synthesizers.js.svg)](LICENSE-MIT)
 
 <!-- generated:product-summary -->
-A 27.9 KB gzipped browser FM synthesizer with 19 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
+A 28.3 KB gzipped browser FM synthesizer with 19 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
 [npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)
@@ -86,6 +86,7 @@ No CDN, sample, or network request is made while playing. The only runtime fetch
 | `resume(): Promise<void>` | Resume any non-running, non-closed context state, including WebKit's `interrupted`. Safe to call from a user gesture. |
 | `noteOn(note: number, vel?: number, noteId?: number): void` | Start a note now. `note` is MIDI pitch (60 = middle C), `vel` is 0..1. Pitch is continuous, so any tuning is playable — `noteOn(69.5)` is the quarter-tone above A440. Outside 0..127 it is clamped; non-finite throws. `noteId` names the note. Omit it and the same pitch retriggers one voice, as before. Supply distinct ids to hold the same pitch twice — two tunings of one key, or a per-note expression channel. |
 | `noteOff(note: number, noteId?: number): void` | Release a note now; its amp release still rings out. Pass the `noteId` it was started with, or omit it to release the note started at this pitch. |
+| `setNotePitch(note: number, pitch: number, noteId?: number): void` | Retune a sounding note without retriggering it. Identify the note exactly as you would to release it: by the pitch it was started at, or by its `noteId`. Envelopes keep their stage and level, so nothing re-attacks and there is no click. Operator ratios follow the new pitch, so the timbre tracks rather than detuning. Applied instantly — right for a scale change or a discrete retune, and it will zipper under a continuously-swept bend. |
 | `allOff(): void` | Release every sounding note, tails intact. |
 | `schedule(events: ScheduledEvent[]): void` | Queue events at absolute context times; applied on the exact frame. |
 | `clear(): void` | Drop everything pending and silence. |
@@ -160,14 +161,14 @@ Alias suppression is a hard CI gate with the shipped 4× path clearing -35 dB wo
 <!-- generated:bundle -->
 | artifact | raw | gzipped |
 |---|---:|---:|
-| `packages/core/wasm/fm_dsp.wasm` | 46,100 B | 18,293 B |
-| `packages/core/src/index.js` | 10,254 B | 3,659 B |
+| `packages/core/wasm/fm_dsp.wasm` | 47,038 B | 18,573 B |
+| `packages/core/src/index.js` | 10,755 B | 3,737 B |
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
 | `packages/core/src/presets.js` | 11,235 B | 2,695 B |
-| `packages/core/worklet/processor.js` | 6,250 B | 2,338 B |
-| **total** | | **28,571 B (27.9 KB)** |
+| `packages/core/worklet/processor.js` | 6,458 B | 2,370 B |
+| **total** | | **28,961 B (28.3 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **46%**.
+Budget is 60 KB gzipped for the whole library — currently **47%**.
 <!-- /generated:bundle -->
 
 ## Runtime cost

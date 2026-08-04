@@ -38,9 +38,12 @@ function assertEvents(events, where) {
   if (events === undefined) return events;
   if (!Array.isArray(events)) throw new TypeError(`${where}: events must be an array`);
   for (const event of events) {
-    if (event?.type === "noteOn" || event?.type === "noteOff") {
+    if (event?.type === "noteOn" || event?.type === "noteOff" || event?.type === "setNotePitch") {
       assertPitch(event.note, `${where}: ${event.type} at ${event.at}s`);
       assertNoteId(event.noteId, `${where}: ${event.type} at ${event.at}s`);
+      if (event.type === "setNotePitch") {
+        assertPitch(event.pitch, `${where}: setNotePitch target at ${event.at}s`);
+      }
     }
   }
   return events;
@@ -239,6 +242,14 @@ export async function createEngine({ wasmUrl, workletUrl, context, initialEvents
         post(noteId === undefined
           ? { type: "noteOff", note }
           : { type: "noteOff", note, noteId });
+      },
+      setNotePitch: (note, pitch, noteId) => {
+        assertPitch(note, "setNotePitch");
+        assertPitch(pitch, "setNotePitch");
+        assertNoteId(noteId, "setNotePitch");
+        post(noteId === undefined
+          ? { type: "setNotePitch", note, pitch }
+          : { type: "setNotePitch", note, pitch, noteId });
       },
       allOff: () => post({ type: "allOff" }),
       /** Schedule events at absolute context times. Applied on the exact frame. */

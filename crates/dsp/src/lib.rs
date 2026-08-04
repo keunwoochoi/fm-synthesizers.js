@@ -133,6 +133,21 @@ impl Engine {
         self.voices[idx].start(pitch, vel, id, &self.patch, self.sr, self.seed);
     }
 
+    /// Retune the sounding voice named `id`, without retriggering it.
+    ///
+    /// An id that names nothing sounding is a no-op. This is the one place a silent
+    /// no-op is right rather than tolerated: a note released between a controller
+    /// sending a bend and the bend arriving is ordinary traffic, not an error, and
+    /// every retuning protocol — MTS, MTS-ESP, MPE channel bend, MIDI 2.0 per-note
+    /// pitch — generates it constantly.
+    pub fn set_note_pitch(&mut self, id: u32, pitch: f32) {
+        for v in self.voices.iter_mut() {
+            if v.active && v.id == id {
+                v.set_pitch(pitch);
+            }
+        }
+    }
+
     /// Release the voice named `id`. An id that names nothing sounding is a no-op.
     pub fn note_off(&mut self, id: u32) {
         for v in self.voices.iter_mut() {
@@ -328,6 +343,28 @@ pub unsafe extern "C" fn note_off(p: *mut Engine, pitch: f32) {
 #[no_mangle]
 pub unsafe extern "C" fn note_off_id(p: *mut Engine, id: u32) {
     eng!(p).note_off(id);
+}
+
+/// Retune the note started at `from_pitch`, identifying it exactly as `note_off` does.
+///
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn set_note_pitch(p: *mut Engine, from_pitch: f32, to_pitch: f32) {
+    if let (Some(from), Some(to)) = (guard_pitch(from_pitch), guard_pitch(to_pitch)) {
+        eng!(p).set_note_pitch(derived_id(from), to);
+    }
+}
+
+/// Retune the note named `id`.
+///
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn set_note_pitch_id(p: *mut Engine, id: u32, to_pitch: f32) {
+    if let Some(to) = guard_pitch(to_pitch) {
+        eng!(p).set_note_pitch(id, to);
+    }
 }
 
 /// # Safety
