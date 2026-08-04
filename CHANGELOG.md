@@ -13,6 +13,8 @@ This file records what changed for **users of the package**. The engineering rec
 
 - An optional **`noteId`** on `noteOn`, `noteOff`, and scheduled events, naming a sounding note independently of its pitch. Two notes at the same pitch with different ids sound together — one key at two tunings, or a per-note expression channel. Omit it and the same pitch retriggers one voice, exactly as before.
 
+- **`setNotePitch(note, pitch, noteId?)`** retunes a sounding note without retriggering it. Envelopes keep their stage and level, so nothing re-attacks and there is no click; operator ratios follow the new pitch, so the timbre tracks instead of detuning. This is the operation live retuning needs — a scale change under a held chord, MTS or MTS-ESP, MPE channel bend — and also ordinary pitch bend, which was previously unimplementable at any resolution. Applied instantly, with no glide.
+
 ### Changed
 
 - A non-finite pitch now throws a `TypeError` instead of sounding something arbitrary. `noteOn(undefined)` used to play MIDI 0 in silence. Scheduled events and `createEngine({ initialEvents })` are checked the same way.

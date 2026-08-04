@@ -108,6 +108,10 @@ class FmProcessor extends AudioWorkletProcessor {
         if (e.noteId === undefined) this.wasm.note_off(this.engine, e.note);
         else this.wasm.note_off_id(this.engine, e.noteId);
         break;
+      case "setNotePitch":
+        if (e.noteId === undefined) this.wasm.set_note_pitch(this.engine, e.note, e.pitch);
+        else this.wasm.set_note_pitch_id(this.engine, e.noteId, e.pitch);
+        break;
       case "allOff":  this.wasm.all_off(this.engine); break;
       case "param":   this.wasm.set_param(this.engine, e.id, e.value); break;
     }

@@ -4,7 +4,7 @@ export type { ParameterDefinition, ParamName } from "./parameters.js";
 
 /** An event applied at an absolute AudioContext time. */
 export interface ScheduledEvent {
-  type: "noteOn" | "noteOff" | "allOff" | "param";
+  type: "noteOn" | "noteOff" | "setNotePitch" | "allOff" | "param";
   /**
    * MIDI pitch, for noteOn / noteOff. Continuous, not an integer: 60 is middle C and
    * 60.5 is the quarter-tone above it. Must be finite; anything else throws.
@@ -17,6 +17,8 @@ export interface ScheduledEvent {
    * pitch. Supply it to hold two notes at the same pitch, or to release one of them.
    */
   noteId?: number;
+  /** New pitch, for `setNotePitch`. */
+  pitch?: number;
   /** Parameter id, for `param`. See {@link PARAM}. */
   id?: number;
   value?: number;
@@ -54,6 +56,16 @@ export interface Engine {
    * with, or omit it to release the note started at this pitch.
    */
   noteOff(note: number, noteId?: number): void;
+  /**
+   * Retune a sounding note without retriggering it. Identify the note exactly as you
+   * would to release it: by the pitch it was started at, or by its `noteId`.
+   *
+   * Envelopes keep their stage and level, so nothing re-attacks and there is no click.
+   * Operator ratios follow the new pitch, so the timbre tracks rather than detuning.
+   * Applied instantly — right for a scale change or a discrete retune, and it will
+   * zipper under a continuously-swept bend.
+   */
+  setNotePitch(note: number, pitch: number, noteId?: number): void;
   /** Release every sounding note, tails intact. */
   allOff(): void;
   /** Queue events at absolute context times; applied on the exact frame. */
