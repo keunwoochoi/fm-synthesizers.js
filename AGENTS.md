@@ -122,6 +122,7 @@ must always happen is a hook, a generated artifact, or a failing test. These are
 | GitHub actions come from the owning account | `scripts/gh-owner.sh` (use always); `scripts/audit/check-identity.sh` runs first in the audit |
 | Evidence matches head SHA and a clean tree | required PR check |
 | **The audit itself fails when it should** | `scripts/audit/fixtures/` — deliberately broken inputs the audit must reject |
+| A refactor that claims to change no sound proves it against a previous commit | `scripts/verify/check_frozen_render.mjs` + the committed baseline |
 
 That last row is the one the sibling project never had. **An audit never observed to fail is not
 evidence of anything.**

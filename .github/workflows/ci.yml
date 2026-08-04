@@ -38,6 +38,16 @@ jobs:
       - name: Engine checks on the shipped WASM
         run: node scripts/verify/check_engine.mjs
 
+      # The one check that compares against a DIFFERENT COMMIT. Everything above grades
+      # this build in isolation and passes a change that is consistent and inside
+      # tolerance -- which is the shape a boundary refactor fails in. Runs after the
+      # engine checks because a NaN-ing build should say so in plain terms first.
+      - name: Render is unchanged from the committed baseline
+        run: npm run verify:frozen
+
+      - name: The frozen-render comparator rejects what it should
+        run: npm run test:frozen
+
       - name: Public engine lifecycle and worklet failure paths
         run: npm run test:lifecycle
 

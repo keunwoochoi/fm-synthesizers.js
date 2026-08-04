@@ -1,0 +1,38 @@
+{
+  "sampleRate": 48000,
+  "maxVoices": 16,
+  "segments": [
+    {
+      "name": "chord",
+      "preset": "e-piano-fm",
+      "frames": 96000,
+      "digest": "0429370235e220802acc30dbbd6b6b0fd1b97ca6c3abb2231db66d91e24cedc9",
+      "peak": 0.456496,
+      "rms": 0.088198
+    },
+    {
+      "name": "tail",
+      "preset": "bell",
+      "frames": 72000,
+      "digest": "4872597442dd256c782fc46e7d7823ff2033160b9f52265780a6f75a7c58e7e8",
+      "peak": 0.262138,
+      "rms": 0.062893
+    },
+    {
+      "name": "steal",
+      "preset": "fm-bass",
+      "frames": 48000,
+      "digest": "6a85593ae3a4af46a567ae95e46800d868f017aea7dfb95b38608679ebb4a9a1",
+      "peak": 0.984257,
+      "rms": 0.292605
+    },
+    {
+      "name": "registers",
+      "preset": "marimba",
+      "frames": 72000,
+      "digest": "14dcb11639fc04f0a703d531201492d572dc9af6ca34ee6157632dd2af65400b",
+      "peak": 0.330103,
+      "rms": 0.072886
+    }
+  ]
+}
