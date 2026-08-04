@@ -71,32 +71,15 @@ printf '%-44s %10s %10s\n' TOTAL "" "$total"
 # and the argument that "TOTAL still enforces the budget" would quietly stop being true.
 # A hand-maintained list defending a budget is the thing this repo's rules call a rule
 # that is remembered rather than enforced, so it is derived-checked instead.
-python3 - "${CORE[@]}" "${OPTIONAL[@]}" <<'PY' || exit 1
-import json, pathlib, sys
+#
+# It lives in its own file so it can be tested: scripts/audit/test_entry_point_coverage.py
+# feeds it every conditional-export shape and asserts each one is rejected. The first
+# version of this check was inline here, read only the `default` condition, and was
+# therefore blind to `{"import": ...}` -- a gate with a trivial bypass, which is worse
+# than no gate because it reads as covered.
+python3 scripts/audit/check_entry_point_coverage.py \
+  --package packages/core/package.json "${CORE[@]}" "${OPTIONAL[@]}" || exit 1
 
-measured = set(sys.argv[1:])
-exports = json.loads(pathlib.Path("packages/core/package.json").read_text())["exports"]
-
-missing = []
-for name, entry in exports.items():
-    dist = entry if isinstance(entry, str) else entry.get("default")
-    if not dist:
-        continue
-    # The audit measures the sources the build copies, not dist/, so that it can run
-    # before a build has happened.
-    src = ("packages/core/wasm/" + dist.rsplit("/", 1)[-1] if dist.endswith(".wasm")
-           else dist.replace("./dist/", "packages/core/src/"))
-    if src not in measured:
-        missing.append(f"{name} -> {dist} (expected to measure {src})")
-
-if missing:
-    print("BUNDLE AUDIT FAIL: entry points are exported but not measured, so they are")
-    print("outside the budget. Add them to CORE or OPTIONAL in this script.")
-    for m in missing:
-        print(f"  {m}")
-    sys.exit(1)
-print(f"entry-point coverage OK — all {len(exports)} exports in package.json are measured")
-PY
 echo "budget: $BUDGET_GZ B gz ($((BUDGET_GZ / 1024)) KB) — using $((total * 100 / BUDGET_GZ))%"
 if [ "$total" -gt "$BUDGET_GZ" ]; then
   echo "BUNDLE AUDIT FAIL: over budget by $((total - BUDGET_GZ)) B gz."

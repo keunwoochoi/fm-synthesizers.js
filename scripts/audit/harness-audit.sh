@@ -66,6 +66,14 @@ echo "== proving the release-impact gate fails closed =="
 run_tests scripts/release/test_check_release_impact.py
 
 echo
+echo "== proving no entry point can escape the size budget =="
+# The bundle audit splits CORE from OPTIONAL, and that split is only honest while every
+# exported entry point is measured. This proves the coverage gate rejects each shape a
+# conditional export can take -- the first version read only `default` and was blind to
+# the rest, which is a bypass rather than a gap.
+run_tests scripts/audit/test_entry_point_coverage.py
+
+echo
 echo "== proving verify-spec rejects cheats =="
 run_tests scripts/verify/test_verify_spec.py
 

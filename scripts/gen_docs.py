@@ -202,6 +202,7 @@ def gen_harness_stats() -> str:
     m = re.search(r"(\d+) checks passed", audit.stdout)
     checks = int(m.group(1)) if m else 0
     a = _count_ok([sys.executable, "scripts/audit/test_harness_audit.py"])
+    a += _count_ok([sys.executable, "scripts/audit/test_entry_point_coverage.py"])
     v = _count_ok([sys.executable, "scripts/verify/test_verify_spec.py"])
     public = _count_node_tests([
         "node", "--test", "scripts/verify/test_parameters.mjs",
