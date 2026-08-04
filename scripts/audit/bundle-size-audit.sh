@@ -28,21 +28,58 @@ fi
 
 # Reproducible across platforms; `gzip -9` is not. See scripts/audit/gzsize.py.
 gz() { python3 scripts/audit/gzsize.py "$1"; }
-# The quickstart imports both public entry points, and index.js imports the parameter
-# metadata. Omitting either file would let generated docs claim an engine-only size for
-# a package whose curated presets and documented controls are part of the product.
-PARTS=("$SHIPPED" packages/core/src/index.js packages/core/src/parameters.js \
-       packages/core/src/presets.js packages/core/worklet/processor.js)
+# CORE is what the quickstart downloads: both entry points it imports, plus the
+# parameter metadata index.js pulls in. Omitting any of them would let generated docs
+# claim an engine-only size for a package whose curated presets and documented controls
+# are part of the product.
+CORE=("$SHIPPED" packages/core/src/index.js packages/core/src/parameters.js \
+      packages/core/src/presets.js packages/core/worklet/processor.js)
 
-total=0
+# OPTIONAL is the subpath entry points nothing in the engine imports. A consumer who
+# never loads a scale downloads none of tunings.js — so it must not inflate the headline
+# figure, which is what a reader takes "this synthesizer is N KB" to mean.
+#
+# It is still counted against the BUDGET, and that is the point of splitting rather than
+# excluding: if a subpath escaped the ceiling, then moving code behind one would become a
+# way to spend budget that nothing measures. Two numbers, because there are two honest
+# questions — what you download, and how large the library is allowed to get.
+OPTIONAL=(packages/core/src/tunings.js)
+
+row() {
+  [ -f "$1" ] || { echo "BUNDLE AUDIT FAIL: $1 is missing."; exit 1; }
+  printf '%-44s %10s %10s\n' "$1" "$(wc -c < "$1" | tr -d ' ')" "$2"
+}
+
+core=0
 printf '%-44s %10s %10s\n' file raw gz
-for f in "${PARTS[@]}"; do
-  [ -f "$f" ] || { echo "BUNDLE AUDIT FAIL: $f is missing."; exit 1; }
-  g=$(gz "$f"); total=$((total + g))
-  printf '%-44s %10s %10s\n' "$f" "$(wc -c < "$f" | tr -d ' ')" "$g"
+for f in "${CORE[@]}"; do
+  g=$(gz "$f"); core=$((core + g)); row "$f" "$g"
 done
+printf '%-44s %10s %10s\n' CORE "" "$core"
 
+total=$core
+echo "-- opt-in subpath entry points --"
+for f in "${OPTIONAL[@]}"; do
+  g=$(gz "$f"); total=$((total + g)); row "$f" "$g"
+done
 printf '%-44s %10s %10s\n' TOTAL "" "$total"
+
+# THE LISTS ABOVE ARE HAND-WRITTEN, SO THEY ARE CHECKED AGAINST THE EXPORT MAP.
+#
+# Splitting CORE from OPTIONAL is only honest while OPTIONAL is complete: a subpath added
+# to packages/core/package.json but not to the list would escape the ceiling silently,
+# and the argument that "TOTAL still enforces the budget" would quietly stop being true.
+# A hand-maintained list defending a budget is the thing this repo's rules call a rule
+# that is remembered rather than enforced, so it is derived-checked instead.
+#
+# It lives in its own file so it can be tested: scripts/audit/test_entry_point_coverage.py
+# feeds it every conditional-export shape and asserts each one is rejected. The first
+# version of this check was inline here, read only the `default` condition, and was
+# therefore blind to `{"import": ...}` -- a gate with a trivial bypass, which is worse
+# than no gate because it reads as covered.
+python3 scripts/audit/check_entry_point_coverage.py \
+  --package packages/core/package.json "${CORE[@]}" "${OPTIONAL[@]}" || exit 1
+
 echo "budget: $BUDGET_GZ B gz ($((BUDGET_GZ / 1024)) KB) — using $((total * 100 / BUDGET_GZ))%"
 if [ "$total" -gt "$BUDGET_GZ" ]; then
   echo "BUNDLE AUDIT FAIL: over budget by $((total - BUDGET_GZ)) B gz."

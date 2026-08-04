@@ -43,6 +43,8 @@ Trademark is the live risk.
 | Bessel functions of the first kind | Public mathematics | The closed-form amplitude of each FM sideband |
 | Smith, *Physical Audio Signal Processing* (CCRMA, online) | Published | General DSP background |
 | Välimäki & Huovilainen, BLIT/BLEP oscillator literature | Published papers | PolyBLEP and related band-limited step corrections (transfers from the subtractive sibling) |
+| Scala scale file format, <https://www.huygens-fokker.org/scala/scl_format.html> | Published format specification (Manuel Op de Coul) | The `.scl` grammar: comment lines, description, note count, cents-versus-ratio rule, the implicit 1/1, and which inputs are read errors |
+| Scala keyboard mappings and scales, <https://www.huygens-fokker.org/scala/help.htm> ("Mappings", "Scales") | Published format specification | The `.kbm` field order and semantics, `x` for an unmapped key, degrees outside the scale resolving by octave extension, and the rule that the last scale entry is the period and that 2/1 is never assumed |
 
 The plumbing copied from `subtractive-synthesizers.js` (same owner, MIT OR Apache-2.0) is listed in
 the port ledger below with its exact source SHA, per the family rule. With the owner's 2026-08-02
@@ -56,6 +58,8 @@ Recorded so these are not re-surveyed every few months.
 | Thing | Verdict | Why |
 |---|---|---|
 | Reference corpora of FM synth multi-samples | **None known usable** (extrapolated from the 2026-07-28 subtractive survey, which found no verified CC0/CC-BY analog corpus) | Hardware FM recordings are calibration spot-checks, never convergence targets. "Royalty-free" is marketing, not a license. Any future use requires a license check first |
+| `surge-synthesizer/tuning-library` (MIT, C++) | **Not opened, not ported** | The de facto reference implementation of `.scl` and `.kbm`, and permissively licensed, so porting would have been allowed. It was not needed: the published format specification answered every question the loader asked, including the awkward ones — negative cents legal but negative ratios a read error, trailing text after a pitch value ignored, an unmapped reference note an error, and the period being the last entry rather than 2/1. Implementing from the specification keeps the provenance trivially clean and left no ledger row to maintain. Recorded so the decision is not re-litigated |
+| The Scala scale archive (over 4000 `.scl` files) | **Not redistributed** | Its licensing has not been checked, and nothing in this package requires it. The demo scales in `apps/playground/tuning.html` are generated (equal divisions), derived (a 5-limit just scale is seven ratios), or a single published step size (Carlos alpha), and they are written as `.scl` text by the page itself |
 
 ## Port ledger
 

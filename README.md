@@ -11,7 +11,7 @@
 A 28.3 KB gzipped browser FM synthesizer with 19 curated patches and 40 documented controls. Audio is synthesized at runtime in a WebAssembly AudioWorklet; the package contains no samples and needs no network access while playing.
 <!-- /generated:product-summary -->
 
-[npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)
+[npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Tuning](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/tuning.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)
 
 ## Install
 
@@ -116,6 +116,27 @@ engine.setNotePitch(60.5, 60.25, 2);   // retune the second while it plays
 engine.noteOff(60, 1);
 ```
 
+### Scala scale files
+
+`fm-synthesizers.js/tunings` is a separate entry point that reads Scala `.scl` scale files and `.kbm` keyboard mappings. It is not imported by the engine, so it costs nothing unless you import it, and it depends on nothing — the parser runs in Node with no audio context.
+
+```js
+import { parseScale, createTuning, createTunedKeyboard } from "fm-synthesizers.js/tunings";
+
+const tuning = createTuning(parseScale(sclFileText));
+const keys = createTunedKeyboard(engine, tuning);
+
+keys.noteOn(60, 0.9);              // MIDI key 60, at whatever pitch the scale gives it
+keys.setTuning(createTuning(parseScale(otherSclText)));   // held notes move, no re-attack
+keys.noteOff(60);
+```
+
+`createTunedKeyboard` uses the **key** as each note's identity rather than its pitch. That stops being optional the moment a scale has more than twelve degrees per period: the key number and the pitch it sounds are then different things, two keys can land on the same pitch, and `noteOff(pitch)` becomes ambiguous. `tuning.pitch(key)` is the underlying function if you would rather call `noteOn` yourself; it returns `null` for a key the mapping leaves unmapped.
+
+Nothing assumes an octave. A scale's period is its last entry, whatever that is, so Bohlen–Pierce (13 equal divisions of 3:1) and Carlos alpha (a 78-cent step that never closes) are ordinary cases. Without a `.kbm` the scale gets a linear mapping — one key per scale degree from middle C, with key 69 at 440 Hz.
+
+Malformed files are rejected with the offending line number rather than repaired, because a scale that half-loads is a tuning nobody chose.
+
 ## Parameters
 
 `PARAMETERS` is exported from the main entry point and is the source of every parameter id, preset-reset default, supported range, increment, unit, and enum value. `DEFAULTS` from `fm-synthesizers.js/presets` is generated from the same definitions. Presets merge their partial overrides over those defaults before applying all controls. Values outside the supported range are not part of the public contract. An optional `editorMax` is a preferred slider ceiling for fine control; the playground expands it when a loaded preset uses a larger supported value.
@@ -184,9 +205,11 @@ Alias suppression is a hard CI gate with the shipped 4× path clearing -35 dB wo
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
 | `packages/core/src/presets.js` | 11,235 B | 2,695 B |
 | `packages/core/worklet/processor.js` | 6,458 B | 2,370 B |
-| **total** | | **28,961 B (28.3 KB)** |
+| **what `import`ing the library downloads** | | **28,961 B (28.3 KB)** |
+| `packages/core/src/tunings.js` _(opt-in subpath)_ | 15,258 B | 6,051 B |
+| **every entry point together** | | **35,012 B (34.2 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **47%**.
+Budget is 60 KB gzipped for the whole library, applied to every entry point together — currently **56%**.
 <!-- /generated:bundle -->
 
 ## Runtime cost
@@ -195,8 +218,8 @@ Budget is 60 KB gzipped for the whole library — currently **47%**.
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **16.6 %** of the 2.667 ms / 128-frame budget |
-| real-time factor | 6.0x |
+| audio-thread budget used | **16.8 %** of the 2.667 ms / 128-frame budget |
+| real-time factor | 5.9x |
 <!-- /generated:bench -->
 
 The benchmark saturates the voice pool with the reference arrangement and enables the feedback algorithm and full index, which is the worst case this build can produce. The measurement describes the machine that regenerated the table; performance on other devices, including mobile devices, is not claimed.
@@ -251,7 +274,7 @@ Every exported preset is bound to exactly one checked intent artifact. `prior` m
 | | |
 |---|---|
 | harness audit assertions | 23 |
-| Python harness/spec tests | 20 |
+| Python harness/spec tests | 30 |
 | public metadata/README tests | 9 |
 | deliberately-broken fixtures | 8 |
 <!-- /generated:harness-stats -->

@@ -97,12 +97,14 @@ try {
   if (Math.abs(docks.before.footer - docks.after.footer) > 1 ||
       Math.abs(docks.after.footer - docks.after.viewport) > 1)
     fail("spectrum/step dock moved or left the viewport while patch cards scrolled");
-  const [editorView, showcaseView] = docks.views;
+  const [editorView, showcaseView, tuningView] = docks.views;
   if (docks.repoHref !== "https://github.com/keunwoochoi/fm-synthesizers.js" ||
-      docks.views.length !== 2 || editorView.text !== "Patch editor" ||
+      docks.views.length !== 3 || editorView.text !== "Patch editor" ||
       editorView.href !== "./index.html" || editorView.current !== null ||
       showcaseView.text !== "Patch showcase" || showcaseView.href !== "./showcase.html" ||
-      showcaseView.current !== "page")
+      showcaseView.current !== "page" ||
+      tuningView.text !== "Tuning" || tuningView.href !== "./tuning.html" ||
+      tuningView.current !== null)
     fail(`showcase view tabs are mislabeled or miswired: ${JSON.stringify(docks.views)}`);
   if (showcaseView.color === editorView.color && showcaseView.background === editorView.background)
     fail("selected showcase tab is not visually distinguished from the editor tab");

@@ -19,7 +19,7 @@ const FINAL_STALE = [
   /\bregistry publication is a separate\b/i,
 ];
 
-const PROJECT_LINKS = "[npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)";
+const PROJECT_LINKS = "[npm package](https://www.npmjs.com/package/fm-synthesizers.js) | [Patch showcase](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/showcase.html) | [Playground](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/index.html) | [Tuning](https://keunwoochoi.github.io/fm-synthesizers.js/apps/playground/tuning.html) | [Changelog](https://github.com/keunwoochoi/fm-synthesizers.js/blob/main/CHANGELOG.md)";
 
 export function auditNpmReadme({ version, readme }) {
   const failures = [];

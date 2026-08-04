@@ -14,6 +14,8 @@
     "check:release-impact": "python3 scripts/release/check_release_impact.py",
     "test:release-impact": "python3 scripts/release/test_check_release_impact.py",
     "test:lifecycle": "node --test scripts/verify/test_lifecycle.mjs",
+    "test:tunings": "node --test scripts/verify/test_tunings.mjs",
+    "check:tuning": "node scripts/dev/tuning-check.mjs",
     "test:parameters": "node scripts/gen_parameters.mjs --check && node --test scripts/verify/test_parameters.mjs",
     "test:npm-readme": "node --test scripts/verify/test_npm_readme.mjs && node scripts/verify/check_npm_readme.mjs",
     "verify:spec": "python3 scripts/verify/verify_spec.py",

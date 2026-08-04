@@ -72,6 +72,8 @@ copyFileSync(join(pkg, "src/parameters.js"), join(dist, "parameters.js"));
 copyFileSync(join(pkg, "src/parameters.d.ts"), join(dist, "parameters.d.ts"));
 copyFileSync(join(pkg, "src/presets.js"), join(dist, "presets.js"));
 copyFileSync(join(pkg, "src/presets.d.ts"), join(dist, "presets.d.ts"));
+copyFileSync(join(pkg, "src/tunings.js"), join(dist, "tunings.js"));
+copyFileSync(join(pkg, "src/tunings.d.ts"), join(dist, "tunings.d.ts"));
 mkdirSync(join(dist, "wasm"), { recursive: true });
 copyFileSync(join(pkg, "wasm/fm_dsp.wasm"), join(dist, "wasm/fm_dsp.wasm"));
 

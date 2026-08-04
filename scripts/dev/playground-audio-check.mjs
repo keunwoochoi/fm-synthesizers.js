@@ -92,12 +92,14 @@ try {
     fail(`operator panels are not one usable row: ${JSON.stringify(layout.modulation)}`);
   if (layout.panels !== layout.randomizers)
     fail(`expected one randomizer per panel, found ${layout.randomizers}/${layout.panels}`);
-  const [editorView, showcaseView] = layout.views;
+  const [editorView, showcaseView, tuningView] = layout.views;
   if (layout.repoHref !== "https://github.com/keunwoochoi/fm-synthesizers.js" ||
-      layout.views.length !== 2 || editorView.text !== "Patch editor" ||
+      layout.views.length !== 3 || editorView.text !== "Patch editor" ||
       editorView.href !== "./index.html" || editorView.current !== "page" ||
       showcaseView.text !== "Patch showcase" || showcaseView.href !== "./showcase.html" ||
-      showcaseView.current !== null)
+      showcaseView.current !== null ||
+      tuningView.text !== "Tuning" || tuningView.href !== "./tuning.html" ||
+      tuningView.current !== null)
     fail(`editor view tabs are mislabeled or miswired: ${JSON.stringify(layout.views)}`);
   if (editorView.color === showcaseView.color && editorView.background === showcaseView.background)
     fail("selected editor tab is not visually distinguished from the showcase tab");
