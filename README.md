@@ -206,10 +206,10 @@ Alias suppression is a hard CI gate with the shipped 4× path clearing -35 dB wo
 | `packages/core/src/presets.js` | 11,235 B | 2,695 B |
 | `packages/core/worklet/processor.js` | 6,458 B | 2,370 B |
 | **what `import`ing the library downloads** | | **28,961 B (28.3 KB)** |
-| `packages/core/src/tunings.js` _(opt-in subpath)_ | 12,968 B | 5,059 B |
-| **every entry point together** | | **34,020 B (33.2 KB)** |
+| `packages/core/src/tunings.js` _(opt-in subpath)_ | 14,723 B | 5,827 B |
+| **every entry point together** | | **34,788 B (34.0 KB)** |
 
-Budget is 60 KB gzipped for the whole library, applied to every entry point together — currently **55%**.
+Budget is 60 KB gzipped for the whole library, applied to every entry point together — currently **56%**.
 <!-- /generated:bundle -->
 
 ## Runtime cost
@@ -218,7 +218,7 @@ Budget is 60 KB gzipped for the whole library, applied to every entry point toge
 | | |
 |---|---|
 | voices in the reference arrangement | 16 (pad + bass + lead, chorus on) |
-| audio-thread budget used | **16.7 %** of the 2.667 ms / 128-frame budget |
+| audio-thread budget used | **16.6 %** of the 2.667 ms / 128-frame budget |
 | real-time factor | 6.0x |
 <!-- /generated:bench -->
 

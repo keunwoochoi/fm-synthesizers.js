@@ -28,11 +28,24 @@ export interface KeyboardMapping {
   middleKey: number;
   /** The key whose frequency is given. */
   referenceKey: number;
-  /** Hertz. `referenceKey` sounds exactly this, whatever the scale. */
+  /**
+   * Hertz. This anchors the whole tuning: every retuned key's pitch is computed as an
+   * interval from `referenceKey` at this frequency, whatever the scale.
+   *
+   * `referenceKey` itself sounds this frequency **only if it is inside
+   * `[firstKey, lastKey]`.** A file may put the reference outside its own retune range —
+   * that is legal, and it still anchors every key that *is* retuned — but the reference
+   * key then sounds the engine's untouched twelve-tone pitch rather than this value. It
+   * is legal enough not to reject and surprising enough to state.
+   */
   referenceFrequency: number;
   /** The degree whose interval separates adjacent repeats of the map. Unused when `size` is 0. */
   octaveDegree: number;
-  /** One entry per key in a repeat: a scale degree, or `null` for an unmapped key (`x`). */
+  /**
+   * One entry per key in a repeat: a scale degree, or `null` for an unmapped key (`x`).
+   * Shorter than `size` when the file left its trailing unmapped keys out, which the
+   * format permits — an index past the end is unmapped, exactly like an explicit `x`.
+   */
   keys: (number | null)[];
 }
 

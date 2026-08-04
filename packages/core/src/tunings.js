@@ -32,9 +32,20 @@ const fail = (line, message) => {
 
 // Every parse error names the line the user has to look at; a parser that says only
 // "invalid file" about a 60-line scale has told them nothing.
+//
+// TRAILING BLANK ROWS ARE DROPPED, and only trailing ones: the final newline every real
+// text file ends with would otherwise be an extra row, which a `.kbm` that leaves its
+// trailing unmapped keys out reads as a scale degree, rejecting a legal file.
+//
+// Nowhere else. A `.scl` description may be empty, and a blank line among pitch or
+// degree entries is ambiguous rather than harmless, so it stays an error with a line
+// number. This trim can only reach the description of a file containing nothing else,
+// which is rejected anyway for having no note count.
 function lines(text, what) {
   if (typeof text !== "string") fail(null, `${what} must be a string, got ${typeof text}`);
-  return text.split(/\r\n|\r|\n/).map((text, i) => ({ text, line: i + 1 }));
+  const rows = text.split(/\r\n|\r|\n/).map((text, i) => ({ text, line: i + 1 }));
+  while (rows.length && rows[rows.length - 1].text.trim() === "") rows.pop();
+  return rows;
 }
 
 // "Lines beginning with an exclamation mark are regarded as comments." Leading
@@ -51,6 +62,16 @@ const isComment = (row) => row.text.trimStart().startsWith("!");
 const CENTS = /^[+-]?\d+\.\d*/;
 const RATIO = /^(\d+)(?:\/(\d+))?/;
 
+// A SLASH COMMITS THE VALUE TO BEING A RATIO. Without this, `RATIO`'s optional group
+// just fails to match and the numerator is taken alone, so `1/`, `1/x` and `1/-2` read
+// as 1/1 and `3/` -- a truncated `3/2` -- reads as 3/1 and sounds a tritave. A corrupt
+// file silently sounding a wrong pitch is what "no silent fallbacks" forbids, and it is
+// unfalsifiable by ear because the scale is someone else's.
+//
+// Not the same as trailing junk: `5/2x` is a valid 5/2 followed by text to ignore, while
+// `5/x` has no denominator. Whether digits follow the slash is the whole distinction.
+const DANGLING_SLASH = /^\d+\/(?!\d)/;
+
 // "If the value contains a period, it is a cents value, otherwise a ratio", and
 // "anything after a valid pitch value should be ignored" -- hence matching a prefix
 // rather than the whole line, so ` 5/4   E\` and `100.0 cents` both read correctly.
@@ -58,6 +79,9 @@ function pitchLineToCents(row) {
   const text = row.text.trim();
   const asCents = CENTS.exec(text);
   if (asCents) return Number(asCents[0]);
+  if (DANGLING_SLASH.test(text)) {
+    fail(row.line, `ratio "${text.split(/\s+/)[0]}" has no denominator after its slash`);
+  }
   const asRatio = RATIO.exec(text);
   if (!asRatio) {
     fail(row.line, text.startsWith("-")
@@ -146,21 +170,19 @@ export function parseKeyboardMapping(text) {
     map[field] = hz;
   });
 
-  // A map repeats every `size` keys, so above 128 it can never repeat inside MIDI's key
-  // range. The specification sets no limit; this one exists because the padding loop
-  // below is the only place a declared number turns into allocation.
-  if (map.size > 128) {
-    fail(rows[0].line, `size of map is ${map.size}; MIDI has 128 keys, so it never repeats`);
-  }
-
   // "For an unmapped key, put in an 'x'. At the end, unmapped keys may be left out."
+  //
+  // Left-out entries are NOT padded in. `mapKeyToDegree` already reads a missing index
+  // as unmapped, so padding would only turn the file's declared `size` into an
+  // allocation -- which then needs a limit the format does not set. Note that a size
+  // larger than 128 is meaningful rather than absurd: offsets below the middle key are
+  // negative, so with a middle key of 60 a size of 200 puts key 0 on entry 140.
   const keys = [];
   for (const row of rows.slice(HEADER.length, HEADER.length + map.size)) {
     const token = row.text.trim().split(/\s+/)[0];
     // Degrees may be "any number, also negative, also lie outside the scale range".
     keys.push(token === "x" || token === "X" ? null : intField(row, "scale degree"));
   }
-  while (keys.length < map.size) keys.push(null);
   map.keys = keys;
 
   // "If this is done with the frequency reference note it will be considered an error."
@@ -212,6 +234,11 @@ export function createTuning(scale, mapping = DEFAULT_MAPPING) {
   // "first/last MIDI note number to retune" -- so it sounds the engine's own twelve-tone
   // pitch, which is the key number. Returning null instead would silence a range the
   // file only declined to change.
+  //
+  // This applies to the REFERENCE KEY too: a file whose reference sits outside its own
+  // retune range still anchors every retuned key against `referenceFrequency`, but the
+  // reference key itself sounds twelve-tone. Legal, so not rejected; documented on
+  // `referenceFrequency` and pinned by a test.
   const pitch = (key) => {
     if (key < mapping.firstKey || key > mapping.lastKey) return key;
     const degree = mapKeyToDegree(mapping, key);

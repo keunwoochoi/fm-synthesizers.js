@@ -33,6 +33,26 @@ const equalDivision = (n, period = "2/1", periodCents = 1200) =>
 
 const TRITAVE_CENTS = 1200 * Math.log2(3);          // 1901.9550008653874
 
+/**
+ * A `.kbm` as it would exist ON DISK: real header comments, and the trailing newline
+ * every editor writes.
+ *
+ * The first version of this suite built its fixtures with `join("\n")`, which has no
+ * trailing newline — and that is precisely the shape no real file has. A short map plus
+ * a trailing newline was rejected as a malformed file for two commits, passing a suite
+ * that was self-consistently wrong about what a file looks like. Every mapping fixture
+ * goes through here now so that cannot recur silently.
+ */
+const kbm = (size, overrides = {}, entries = [], eol = "\n") => {
+  const f = {
+    firstKey: 0, lastKey: 127, middleKey: 60,
+    referenceKey: 69, referenceFrequency: 440, octaveDegree: 12, ...overrides,
+  };
+  return ["! generated fixture", String(size), String(f.firstKey), String(f.lastKey),
+    String(f.middleKey), String(f.referenceKey), String(f.referenceFrequency),
+    String(f.octaveDegree), "! mapping", ...entries].join(eol) + eol;
+};
+
 // The example file printed in the .scl format specification itself: quarter-comma
 // meantone, and the one case that mixes cents lines and ratio lines in one scale.
 const MEANTONE = `! meanquar.scl
@@ -117,6 +137,31 @@ for (const [what, text] of [
   });
 }
 
+// A SLASH COMMITS THE VALUE TO BEING A RATIO. Before this was enforced, the optional
+// denominator group simply failed to match and the numerator was taken alone, so every
+// line below parsed as `n/1` and a corrupt file sounded a wrong pitch in silence. The
+// `3/` case is the one that shows why it matters: a truncated `3/2` became a tritave.
+for (const [value, wouldHaveBeen] of [
+  ["1/", "1/1, 0 cents"],
+  ["1/-2", "1/1, 0 cents"],
+  ["1/x", "1/1, 0 cents"],
+  ["3/", "3/1, a tritave where a fifth was written"],
+  ["1//2", "1/1, 0 cents"],
+]) {
+  test(`scl: rejects "${value}" rather than reading it as ${wouldHaveBeen}`, () => {
+    assert.throws(() => parseScale(`d\n1\n${value}\n`), /no denominator after its slash/);
+  });
+}
+
+test("scl: trailing junk after a COMPLETE ratio is still ignored", () => {
+  // The distinction the rule above turns on: `5/2x` is a valid 5/2 followed by text
+  // that "should be ignored", where `5/x` is a ratio with no denominator. Over-strictness
+  // here would reject the specification's own `5/4   E\\` example.
+  near(parseScale("d\n1\n5/2x\n").degrees[0], 1200 * Math.log2(5 / 2), CENT, "5/2x is 5/2");
+  near(parseScale("d\n1\n5/4   E\\\n").degrees[0], 1200 * Math.log2(5 / 4), CENT, "the spec example");
+  near(parseScale("d\n1\n1/2/3\n").degrees[0], -1200, CENT, "a second slash is trailing junk");
+});
+
 test("scl: a rejection names the line to look at", () => {
   assert.throws(() => parseScale("d\n2\n100.0\n-3/2\n"), /line 4:/);
 });
@@ -182,17 +227,14 @@ test("Carlos alpha never returns to an octave", () => {
 
 // --- keyboard mappings -------------------------------------------------------------
 
-const LINEAR_KBM = ["! template", "0", "0", "127", "60", "69", "440.0", "12"].join("\n");
-
 test("kbm: a size-0 map is linear and matches the built-in default", () => {
-  const parsed = parseKeyboardMapping(LINEAR_KBM);
+  const parsed = parseKeyboardMapping(kbm(0, {}, []));
   assert.deepEqual({ ...parsed, keys: [...parsed.keys] }, { ...DEFAULT_MAPPING, keys: [] });
 });
 
 test("kbm: an explicit 12-entry map reproduces the linear case for a 12-note scale", () => {
   const explicit = parseKeyboardMapping(
-    ["12", "0", "127", "60", "69", "440.0", "12",
-      ...Array.from({ length: 12 }, (_, i) => String(i))].join("\n"));
+    kbm(12, {}, Array.from({ length: 12 }, (_, i) => String(i))));
   const scale = parseScale(equalDivision(12));
   const a = createTuning(scale, explicit);
   const b = createTuning(scale);
@@ -200,54 +242,169 @@ test("kbm: an explicit 12-entry map reproduces the linear case for a 12-note sca
 });
 
 test("kbm: an 'x' leaves the key unmapped, and trailing entries may be left out", () => {
-  // Seven keys per repeat, only five of them mapped: a scale with fewer degrees than
-  // the keyboard has keys, which is the case the field exists for.
+  // Seven keys per repeat, only five of them written down: a scale with fewer degrees
+  // than the keyboard has keys, which is the case the field exists for.
   const mapping = parseKeyboardMapping(
-    ["7", "0", "127", "60", "60", "440.0", "5", "0", "x", "1", "2", "x"].join("\n"));
-  assert.deepEqual(mapping.keys, [0, null, 1, 2, null, null, null]);
+    kbm(7, { middleKey: 60, referenceKey: 60, octaveDegree: 5 }, ["0", "x", "1", "2", "x"]));
+  assert.deepEqual(mapping.keys, [0, null, 1, 2, null], "only what the file wrote down");
   const tuning = createTuning(parseScale(equalDivision(5)), mapping);
   assert.equal(tuning.pitch(61), null, "an x key sounds nothing");
   assert.equal(tuning.pitch(65), null, "a left-out trailing key is unmapped too");
   near(tuning.pitch(67) - tuning.pitch(60), 12, 1e-9, "seven keys is one repeat of the map");
 });
 
+// THE REGRESSION. A `.kbm` that leaves its trailing unmapped keys out -- which the format
+// explicitly permits -- and ends with a newline, which every file on disk does. Splitting
+// on newlines turned that final newline into an empty row, and a short map read it as a
+// scale degree and rejected the file. A FULL map stops before the empty row, which is why
+// the first version of this suite never saw it: its fixtures were `join("\n")`, so none of
+// them had the trailing newline that every real file has.
+test("kbm: a short map in a file that ends with a newline is legal", () => {
+  for (const [what, eol] of [["LF", "\n"], ["CRLF", "\r\n"], ["CR", "\r"]]) {
+    // The reference note has to be inside the entries that ARE written down; see the
+    // test below for what happens when it is not.
+    const text = kbm(12, { referenceKey: 60, referenceFrequency: 261.6255653 },
+      ["0", "1", "2"], eol);
+    assert.ok(text.endsWith(eol), `${what} fixture must end with its line ending`);
+    const mapping = parseKeyboardMapping(text);
+    assert.deepEqual(mapping.keys, [0, 1, 2], `${what}: the trailing newline is not a degree`);
+    const tuning = createTuning(parseScale(equalDivision(12)), mapping);
+    near(tuning.pitch(60), 60, 1e-6, `${what}: middle C still sounds middle C`);
+    near(tuning.pitch(62), 62, 1e-6, `${what}: and the entries that exist still map`);
+    assert.equal(tuning.pitch(64), null, `${what}: a left-out key is unmapped`);
+  }
+});
+
+test("kbm: a left-out key is unmapped, so a reference note among them is an error", () => {
+  // A left-out trailing entry is equivalent to an explicit "x" — the format says
+  // unmapped keys "may be left out at the end" — and the format also says an unmapped
+  // reference note is an error. So this file is rejected, but for the RIGHT reason.
+  // Before the trailing-newline fix it was rejected for the wrong one: the file's final
+  // newline was read as a fourth entry and reported as a malformed scale degree.
+  const text = kbm(12, { referenceKey: 69 }, ["0", "1", "2"]);
+  assert.throws(() => parseKeyboardMapping(text), (error) => {
+    assert.match(error.message, /reference note 69 is unmapped/);
+    assert.doesNotMatch(error.message, /got ""/,
+      "the trailing newline is being read as a degree again");
+    return true;
+  });
+});
+
+test("scl: a file that ends with a newline, in any line ending, parses the same", () => {
+  for (const eol of ["\n", "\r\n", "\r"]) {
+    const text = ["! generated", "just a fifth", " 2", " 3/2", " 2/1"].join(eol) + eol;
+    const scale = parseScale(text);
+    assert.equal(scale.size, 2);
+    assert.equal(scale.description, "just a fifth");
+    near(scale.degrees[0], 1200 * Math.log2(1.5), CENT, "the fifth survives the line ending");
+    near(scale.period, 1200, CENT, "so does the period");
+  }
+});
+
+test("scl: a blank line among the pitch values is still an error", () => {
+  // The trailing-newline fix must not turn into "ignore blank lines", because a blank
+  // line between entries is ambiguous rather than harmless.
+  assert.throws(() => parseScale("d\n2\n100.0\n\n200.0\n"), /line 4:/);
+});
+
 test("kbm: an unmapped reference note is a read error", () => {
   assert.throws(
-    () => parseKeyboardMapping(["2", "0", "127", "60", "61", "440.0", "2", "0", "x"].join("\n")),
+    () => parseKeyboardMapping(kbm(2, { middleKey: 60, referenceKey: 61, octaveDegree: 2 },
+      ["0", "x"])),
     /reference note 61 is unmapped/);
 });
 
 test("kbm: the reference note sounds the reference frequency, whatever the scale", () => {
-  for (const [n, hz, key] of [[12, 440, 69], [19, 432, 69], [31, 256, 60]]) {
+  for (const [n, hz, key] of [[12, 440, 69], [19, 432, 69], [31, 256, 60], [53, 415.3, 69]]) {
     const mapping = parseKeyboardMapping(
-      ["0", "0", "127", "60", String(key), String(hz), "12"].join("\n"));
+      kbm(0, { referenceKey: key, referenceFrequency: hz }, []));
     const tuning = createTuning(parseScale(equalDivision(n)), mapping);
     near(tuning.frequency(key), hz, 1e-9, `${n}-EDO reference`);
   }
 });
 
 test("kbm: keys outside the retune range keep the engine's own pitch", () => {
-  const mapping = parseKeyboardMapping(["0", "48", "72", "60", "69", "440.0", "12"].join("\n"));
+  const mapping = parseKeyboardMapping(kbm(0, { firstKey: 48, lastKey: 72 }, []));
   const tuning = createTuning(parseScale(equalDivision(19)), mapping);
   assert.equal(tuning.pitch(47), 47, "below the range");
   assert.equal(tuning.pitch(73), 73, "above the range");
   assert.notEqual(tuning.pitch(61), 61, "inside the range it is retuned");
 });
 
-test("kbm: a non-repeating 128-key map is accepted, a longer one is not", () => {
-  const body = Array.from({ length: 128 }, (_, i) => String(i));
+test("kbm: a mapped key BELOW the middle key crosses the repeat boundary correctly", () => {
+  // The suite had no case for this: the only lower key it touched was outside the retune
+  // range and returned early. Offsets below the middle key are negative, and JavaScript's
+  // `%` keeps the sign -- so a `%`-based implementation reads keys[-1], gets undefined,
+  // and reports every key below middle C as unmapped while passing everything else here.
   const mapping = parseKeyboardMapping(
-    ["128", "0", "127", "0", "0", "440.0", "128", ...body].join("\n"));
+    kbm(12, { middleKey: 60, referenceKey: 60, referenceFrequency: 261.6255653 },
+      Array.from({ length: 12 }, (_, i) => String(i))));
+  const tuning = createTuning(parseScale(equalDivision(19)), mapping);
+  const step = 1200 / 19;
+
+  assert.notEqual(tuning.pitch(59), null, "key 59 is mapped, not off the end of the array");
+  // Key 59 is one key below middle: entry 11 of the previous repeat, so degree 11 - 12.
+  near((tuning.pitch(59) - tuning.pitch(60)) * 100, -step, 1e-6, "one 19-EDO step down");
+  // Key 48 is exactly one repeat down: entry 0, degree -12.
+  near((tuning.pitch(48) - tuning.pitch(60)) * 100, -12 * step, 1e-6, "twelve steps down");
+  // And two repeats down, so the floor division is exercised past -1.
+  near((tuning.pitch(36) - tuning.pitch(60)) * 100, -24 * step, 1e-6, "twenty-four steps down");
+  // Symmetry: the same distance up and down must be the same interval.
+  near(tuning.pitch(72) - tuning.pitch(60), tuning.pitch(60) - tuning.pitch(48), 1e-9,
+    "up and down one repeat are the same interval");
+
+  // An 'x' below the middle key must still be unmapped, so the index really is being
+  // computed rather than clamped to something that happens to be in range.
+  const sparse = parseKeyboardMapping(
+    kbm(12, { middleKey: 60, referenceKey: 60, referenceFrequency: 261.6255653 },
+      ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "x"]));
+  assert.equal(createTuning(parseScale(equalDivision(19)), sparse).pitch(59), null,
+    "entry 11 is x, so key 59 is unmapped");
+});
+
+test("kbm: a reference note outside the retune range still anchors the keys that are in it", () => {
+  // Legal, and surprising enough to pin: the reference key itself is NOT retuned, so it
+  // sounds its twelve-tone pitch rather than referenceFrequency -- while every key that
+  // IS retuned is still anchored against that frequency. Documented on
+  // referenceFrequency in tunings.d.ts.
+  const mapping = parseKeyboardMapping(
+    kbm(0, { firstKey: 70, lastKey: 72, referenceKey: 69, referenceFrequency: 432 }));
+  const tuning = createTuning(parseScale(equalDivision(12)), mapping);
+  assert.equal(tuning.pitch(69), 69, "the reference key is outside its own retune range");
+  near(tuning.frequency(69), 440, 1e-9, "so it sounds twelve-tone, not 432 Hz");
+  near(tuning.pitch(70), 69 + 12 * Math.log2(432 / 440) + 1, 1e-9,
+    "but an in-range key is still anchored against 432 Hz");
+  near(tuning.frequency(70), 432 * Math.pow(2, 1 / 12), 1e-9, "a semitone above the reference");
+});
+
+test("kbm: a map longer than 128 keys still indexes meaningfully", () => {
+  // Offsets below the middle key are negative, so a map far larger than MIDI's key range
+  // is not nonsense: with a middle key of 60, key 0 lands on entry 140 of 200. An earlier
+  // version capped size at 128 on the opposite reasoning and rejected this file.
+  const entries = Array.from({ length: 200 }, (_, i) => String(i));
+  const mapping = parseKeyboardMapping(
+    kbm(200, { middleKey: 60, referenceKey: 60, octaveDegree: 12 }, entries));
+  assert.equal(mapping.keys.length, 200);
+  const tuning = createTuning(parseScale(equalDivision(12)), mapping);
+  assert.equal(mapping.keys[140], 140, "entry 140 is the one key 0 reads");
+  assert.ok(Number.isFinite(tuning.pitch(0)), "key 0 has a pitch, from the far end of the map");
+  // Entry 12 is degree 12, which is one period up in a 12-note scale.
+  near(tuning.pitch(72) - tuning.pitch(60), 12, 1e-9, "entry 12 is a period above entry 0");
+});
+
+test("kbm: a non-repeating 128-key map is accepted", () => {
+  const entries = Array.from({ length: 128 }, (_, i) => String(i));
+  const mapping = parseKeyboardMapping(
+    kbm(128, { middleKey: 0, referenceKey: 0, octaveDegree: 128 }, entries));
   assert.equal(mapping.keys.length, 128);
-  assert.throws(() => parseKeyboardMapping(["129", "0", "127", "0", "0", "440.0", "128"].join("\n")),
-    /never repeats/);
 });
 
 for (const [what, text] of [
-  ["a truncated header", "0\n0\n127\n60\n"],
-  ["a non-integer map size", "half\n0\n127\n60\n69\n440.0\n12"],
-  ["a negative map size", "-1\n0\n127\n60\n69\n440.0\n12"],
-  ["a zero reference frequency", "0\n0\n127\n60\n69\n0\n12"],
+  ["a truncated header", kbm(0, {}, []).split("\n").slice(0, 4).join("\n") + "\n"],
+  ["a non-integer map size", "half\n0\n127\n60\n69\n440.0\n12\n"],
+  ["a negative map size", "-1\n0\n127\n60\n69\n440.0\n12\n"],
+  ["a zero reference frequency", "0\n0\n127\n60\n69\n0\n12\n"],
+  ["a blank line inside the map entries", "3\n0\n127\n60\n60\n440.0\n3\n0\n\n2\n"],
 ]) {
   test(`kbm: rejects ${what}`, () => {
     assert.throws(() => parseKeyboardMapping(text), /^Error: fm-synthesizers tunings:/);
@@ -256,7 +413,7 @@ for (const [what, text] of [
 
 test("kbm: degrees may be negative and may lie outside the scale", () => {
   const mapping = parseKeyboardMapping(
-    ["3", "0", "127", "60", "60", "440.0", "3", "-2", "0", "7"].join("\n"));
+    kbm(3, { middleKey: 60, referenceKey: 60, octaveDegree: 3 }, ["-2", "0", "7"]));
   const tuning = createTuning(parseScale(equalDivision(5)), mapping);
   near((tuning.pitch(61) - tuning.pitch(60)) * 100, 2 * 1200 / 5, 1e-6, "degree -2 below degree 0");
   near((tuning.pitch(62) - tuning.pitch(61)) * 100, 7 * 1200 / 5, 1e-6, "degree 7 above degree 0");
