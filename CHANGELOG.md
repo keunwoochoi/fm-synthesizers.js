@@ -7,13 +7,13 @@ This file records what changed for **users of the package**. The engineering rec
 
 ## [Unreleased]
 
+The note boundary is no longer twelve-tone. Pitch is continuous, a sounding note has a name of its own, and that name can be used to retune it while it plays. Existing code is unaffected: integer notes sound exactly as they did, sample for sample.
+
 ### Added
 
-- `noteOn` and `noteOff` take a **fractional MIDI pitch**, so any tuning is playable: `noteOn(69.5)` is the quarter-tone above A440, and step *k* of an *n*-tone equal division of the octave is `69 + 12 * k / n`. Previously the value was truncated to an integer, and `noteOn(60.7)` sounded note 60.
-
-- An optional **`noteId`** on `noteOn`, `noteOff`, and scheduled events, naming a sounding note independently of its pitch. Two notes at the same pitch with different ids sound together — one key at two tunings, or a per-note expression channel. Omit it and the same pitch retriggers one voice, exactly as before.
-
-- **`setNotePitch(note, pitch, noteId?)`** retunes a sounding note without retriggering it. Envelopes keep their stage and level, so nothing re-attacks and there is no click; operator ratios follow the new pitch, so the timbre tracks instead of detuning. This is the operation live retuning needs — a scale change under a held chord, MTS or MTS-ESP, MPE channel bend — and also ordinary pitch bend, which was previously unimplementable at any resolution. Applied instantly, with no glide.
+- **Fractional pitch.** `noteOn` and `noteOff` take a continuous MIDI pitch, so any tuning is playable. `noteOn(69.5)` is the quarter-tone above A440; step *k* of an *n*-tone equal division of the octave is `69 + 12 * k / n`. Previously the value was truncated to an integer and `noteOn(60.7)` sounded note 60.
+- **`noteId`**, optional on `noteOn`, `noteOff`, and scheduled events — a name for a sounding note, independent of its pitch. Two notes at the same pitch with different ids sound together: one key at two tunings, or a per-note expression channel. Omit it and the same pitch retriggers one voice, exactly as before.
+- **`setNotePitch(note, pitch, noteId?)`** retunes a sounding note without retriggering it. Envelopes keep their stage and level, so nothing re-attacks and there is no click; operator ratios follow the new pitch, so the timbre tracks rather than detuning. This is what live retuning needs — a scale change under a held chord, MTS or MTS-ESP, an MPE channel bend — and it is also ordinary pitch bend, which was previously unimplementable at any resolution. Applied instantly, with no glide.
 
 ### Changed
 
