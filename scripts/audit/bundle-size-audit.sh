@@ -28,20 +28,40 @@ fi
 
 # Reproducible across platforms; `gzip -9` is not. See scripts/audit/gzsize.py.
 gz() { python3 scripts/audit/gzsize.py "$1"; }
-# The quickstart imports both public entry points, and index.js imports the parameter
-# metadata. Omitting either file would let generated docs claim an engine-only size for
-# a package whose curated presets and documented controls are part of the product.
-PARTS=("$SHIPPED" packages/core/src/index.js packages/core/src/parameters.js \
-       packages/core/src/presets.js packages/core/worklet/processor.js)
+# CORE is what the quickstart downloads: both entry points it imports, plus the
+# parameter metadata index.js pulls in. Omitting any of them would let generated docs
+# claim an engine-only size for a package whose curated presets and documented controls
+# are part of the product.
+CORE=("$SHIPPED" packages/core/src/index.js packages/core/src/parameters.js \
+      packages/core/src/presets.js packages/core/worklet/processor.js)
 
-total=0
+# OPTIONAL is the subpath entry points nothing in the engine imports. A consumer who
+# never loads a scale downloads none of tunings.js — so it must not inflate the headline
+# figure, which is what a reader takes "this synthesizer is N KB" to mean.
+#
+# It is still counted against the BUDGET, and that is the point of splitting rather than
+# excluding: if a subpath escaped the ceiling, then moving code behind one would become a
+# way to spend budget that nothing measures. Two numbers, because there are two honest
+# questions — what you download, and how large the library is allowed to get.
+OPTIONAL=(packages/core/src/tunings.js)
+
+row() {
+  [ -f "$1" ] || { echo "BUNDLE AUDIT FAIL: $1 is missing."; exit 1; }
+  printf '%-44s %10s %10s\n' "$1" "$(wc -c < "$1" | tr -d ' ')" "$2"
+}
+
+core=0
 printf '%-44s %10s %10s\n' file raw gz
-for f in "${PARTS[@]}"; do
-  [ -f "$f" ] || { echo "BUNDLE AUDIT FAIL: $f is missing."; exit 1; }
-  g=$(gz "$f"); total=$((total + g))
-  printf '%-44s %10s %10s\n' "$f" "$(wc -c < "$f" | tr -d ' ')" "$g"
+for f in "${CORE[@]}"; do
+  g=$(gz "$f"); core=$((core + g)); row "$f" "$g"
 done
+printf '%-44s %10s %10s\n' CORE "" "$core"
 
+total=$core
+echo "-- opt-in subpath entry points --"
+for f in "${OPTIONAL[@]}"; do
+  g=$(gz "$f"); total=$((total + g)); row "$f" "$g"
+done
 printf '%-44s %10s %10s\n' TOTAL "" "$total"
 echo "budget: $BUDGET_GZ B gz ($((BUDGET_GZ / 1024)) KB) — using $((total * 100 / BUDGET_GZ))%"
 if [ "$total" -gt "$BUDGET_GZ" ]; then

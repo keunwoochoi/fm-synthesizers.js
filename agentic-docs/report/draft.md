@@ -20,9 +20,11 @@ A 28.3 KB gzipped browser FM synthesizer with 19 curated patches and 40 document
 | `packages/core/src/parameters.js` | 4,554 B | 1,586 B |
 | `packages/core/src/presets.js` | 11,235 B | 2,695 B |
 | `packages/core/worklet/processor.js` | 6,458 B | 2,370 B |
-| **total** | | **28,961 B (28.3 KB)** |
+| **what `import`ing the library downloads** | | **28,961 B (28.3 KB)** |
+| `packages/core/src/tunings.js` _(opt-in subpath)_ | 12,968 B | 5,059 B |
+| **every entry point together** | | **34,020 B (33.2 KB)** |
 
-Budget is 60 KB gzipped for the whole library — currently **47%**.
+Budget is 60 KB gzipped for the whole library, applied to every entry point together — currently **55%**.
 <!-- /generated:bundle -->
 
 ## Alias suppression (the M1 gate)

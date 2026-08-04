@@ -37,6 +37,8 @@ try {
   writeFileSync(join(work, "consumer.ts"), `
 import { ALGORITHM, PARAM, PARAMETERS, RATIOS, createEngine, type Engine, type ParamName } from "fm-synthesizers.js";
 import { DEFAULTS, PRESETS, applyPreset, type Preset } from "fm-synthesizers.js/presets";
+import { parseScale, parseKeyboardMapping, createTuning, createTunedKeyboard, DEFAULT_MAPPING,
+  type Scale, type KeyboardMapping, type Tuning, type TunedKeyboard } from "fm-synthesizers.js/tunings";
 
 const name: ParamName = "op2Ratio";
 const id: number = PARAM[name];
@@ -55,11 +57,31 @@ async function play(): Promise<Engine> {
   return engine;
 }
 
+const scale: Scale = parseScale("d\\n1\\n2/1\\n");
+const mapping: KeyboardMapping = parseKeyboardMapping("0\\n0\\n127\\n60\\n69\\n440.0\\n12");
+const tuning: Tuning = createTuning(scale, mapping);
+const period: number = tuning.period;
+const keyPitch: number | null = tuning.pitch(60);
+const fallbackMapping: Readonly<KeyboardMapping> = DEFAULT_MAPPING;
+
+async function playScale(): Promise<TunedKeyboard> {
+  const engine = await createEngine({ connect: false });
+  const board: TunedKeyboard = createTunedKeyboard(engine, tuning);
+  const started: boolean = board.noteOn(60, 0.9);
+  board.setTuning(createTuning(parseScale("d\\n1\\n3/1\\n")));
+  board.noteOff(60);
+  void started;
+  return board;
+}
+
+// @ts-expect-error an unmapped key returns null, so the result is not a bare number
+const pitchIsNotAlwaysNumber: number = tuning.pitch(60);
 // @ts-expect-error unknown parameter names must not widen to string
 PARAM.notAParameter;
 // @ts-expect-error preset fields must use public parameter names
 const invalid: Preset = { label: "x", group: "keys", blurb: "x", params: { nope: 1 } };
-void [id, ratioUnit, algorithm, ratio, preset, defaults, play, invalid];
+void [id, ratioUnit, algorithm, ratio, preset, defaults, play, invalid,
+     period, keyPitch, fallbackMapping, playScale, pitchIsNotAlwaysNumber];
 `);
 
   const tsc = join(root, "node_modules/typescript/bin/tsc");

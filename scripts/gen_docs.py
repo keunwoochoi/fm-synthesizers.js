@@ -223,30 +223,51 @@ def _bundle_audit_output() -> str:
 
 
 def gen_bundle() -> str:
-    """Measured size of everything a browser downloads. Owned by the audit script."""
+    """Measured size of everything a browser downloads. Owned by the audit script.
+
+    Two totals, because there are two honest questions and one number cannot answer
+    both: CORE is what importing the library gets you, TOTAL adds the opt-in subpath
+    entry points that nothing imports for you. The ceiling applies to TOTAL, so moving
+    code behind a subpath can never be a way to spend budget nothing measures.
+    """
     rows = ["| artifact | raw | gzipped |", "|---|---:|---:|"]
-    total = pct = None
+    core = total = pct = None
+    optional = False
     for ln in _bundle_audit_output().splitlines():
         parts = ln.split()
-        if len(parts) == 3 and parts[0].startswith("packages/"):
-            rows.append(f"| `{parts[0]}` | {int(parts[1]):,} B | {int(parts[2]):,} B |")
+        if ln.startswith("-- opt-in"):
+            optional = True
+        elif len(parts) == 3 and parts[0].startswith("packages/"):
+            suffix = " _(opt-in subpath)_" if optional else ""
+            rows.append(f"| `{parts[0]}`{suffix} | {int(parts[1]):,} B | {int(parts[2]):,} B |")
+        elif parts[:1] == ["CORE"]:
+            core = int(parts[1])
+            rows.append(f"| **what `import`ing the library downloads** | | "
+                        f"**{core:,} B ({core/1024:.1f} KB)** |")
         elif parts[:1] == ["TOTAL"]:
             total = int(parts[1])
         elif ln.startswith("budget:"):
             pct = ln.split("using")[-1].strip()
     if total is not None:
-        rows.append(f"| **total** | | **{total:,} B ({total/1024:.1f} KB)** |")
+        rows.append(f"| **every entry point together** | | "
+                    f"**{total:,} B ({total/1024:.1f} KB)** |")
     if pct:
         rows.append("")
-        rows.append(f"Budget is 60 KB gzipped for the whole library — currently **{pct}**.")
+        rows.append("Budget is 60 KB gzipped for the whole library, applied to every entry "
+                    f"point together — currently **{pct}**.")
     return "\n".join(rows) + "\n"
 
 
 def gen_bundle_total() -> str:
-    """Just the headline figure, for places that want one number inline."""
+    """The headline figure: what a reader of "this synthesizer is N KB" actually gets.
+
+    CORE, not TOTAL. An opt-in subpath a consumer never imports is not part of what they
+    download, and inflating the headline with it would be as wrong as the sibling
+    project's understatement, only in the other direction.
+    """
     for ln in _bundle_audit_output().splitlines():
         parts = ln.split()
-        if parts[:1] == ["TOTAL"]:
+        if parts[:1] == ["CORE"]:
             return f"{int(parts[1]) / 1024:.1f} KB"
     return "unknown"
 

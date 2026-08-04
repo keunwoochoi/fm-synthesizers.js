@@ -8,6 +8,7 @@
   "exports": {
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
     "./presets": { "types": "./dist/presets.d.ts", "default": "./dist/presets.js" },
+    "./tunings": { "types": "./dist/tunings.d.ts", "default": "./dist/tunings.js" },
     "./wasm": "./dist/wasm/fm_dsp.wasm"
   },
   "engines": { "node": ">=18" },

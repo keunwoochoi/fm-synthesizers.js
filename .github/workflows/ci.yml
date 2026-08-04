@@ -69,6 +69,12 @@ jobs:
       - name: Public engine lifecycle and worklet failure paths
         run: npm run test:lifecycle
 
+      # Arithmetic with an exact answer, so it is graded like the DSP: every expected
+      # value derived from the interval, and the deliberately broken scale files that
+      # the parser must reject.
+      - name: Scala scale and keyboard-mapping loader
+        run: npm run test:tunings
+
       - name: DSP budget
         run: node scripts/verify/dsp_bench.mjs
 
@@ -101,6 +107,10 @@ jobs:
       - run: node scripts/dev/arp-check.mjs
       - run: node scripts/dev/playground-audio-check.mjs
       - run: BROWSER=webkit node scripts/dev/playground-audio-check.mjs
+      # Measures the RENDERED AUDIO against the frequencies a loaded scale names, so a
+      # loader that quietly falls back to twelve-tone cannot pass.
+      - run: node scripts/dev/tuning-check.mjs
+      - run: BROWSER=webkit node scripts/dev/tuning-check.mjs
       # Safari's engine, where audio APIs most often differ. A stated principle
       # ("works where web devs work") that nothing verified until now.
       - run: BROWSER=webkit node scripts/dev/e2e-check.mjs
