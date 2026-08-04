@@ -205,6 +205,42 @@ test("a fractional pitch is passed through, and a non-finite one throws", async 
     /pitch must be a finite number/);
 });
 
+// The worklet switches on whether `noteId` is PRESENT, so the message must omit the key
+// rather than carry an explicit undefined — a structured clone preserves the own property
+// either way, and the two-argument WASM export is what derives the compatible id.
+test("noteId is passed when given and absent when not", async () => {
+  const context = new MockContext("running");
+  const engine = await createEngine({ context, wasmUrl: "/engine.wasm", workletUrl: "/processor.js" });
+  const port = MockNode.instances[0].port;
+
+  engine.noteOn(60, 0.8);
+  assert.deepEqual(port.messages.at(-1), { type: "noteOn", note: 60, vel: 0.8 });
+  assert.ok(!("noteId" in port.messages.at(-1)), "the key must be absent, not undefined");
+
+  engine.noteOn(60, 0.8, 7);
+  assert.deepEqual(port.messages.at(-1), { type: "noteOn", note: 60, vel: 0.8, noteId: 7 });
+  engine.noteOff(60, 7);
+  assert.deepEqual(port.messages.at(-1), { type: "noteOff", note: 60, noteId: 7 });
+  engine.noteOff(60);
+  assert.deepEqual(port.messages.at(-1), { type: "noteOff", note: 60 });
+
+  const sent = port.messages.length;
+  for (const bad of [-1, 1.5, 2 ** 32, NaN, "7", null]) {
+    assert.throws(() => engine.noteOn(60, 0.8, bad), /noteId must be an integer/,
+      `noteOn(..., ${String(bad)}) must throw`);
+    assert.throws(() => engine.noteOff(60, bad), /noteId must be an integer/);
+  }
+  // 0 and the top of the range are legitimate ids, not sentinels.
+  engine.noteOn(60, 0.8, 0);
+  assert.equal(port.messages.at(-1).noteId, 0);
+  engine.noteOn(60, 0.8, 0xffffffff);
+  assert.equal(port.messages.at(-1).noteId, 0xffffffff);
+  assert.equal(port.messages.length, sent + 2, "rejected ids must post nothing");
+
+  assert.throws(() => engine.schedule([{ type: "noteOn", note: 60, vel: 0.5, noteId: -1, at: 1 }]),
+    /noteId must be an integer/);
+});
+
 test("noteOn and resume recover interrupted and future non-running states but not closed", async () => {
   const context = new MockContext("interrupted");
   const engine = await createEngine({ context, wasmUrl: "/engine.wasm", workletUrl: "/processor.js" });
