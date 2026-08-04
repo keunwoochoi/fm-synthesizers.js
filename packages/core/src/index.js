@@ -9,6 +9,31 @@ const WORKLET_SOURCE = /* __WORKLET_SOURCE__ */ null;
 import { PARAM } from "./parameters.js";
 export { ALGORITHM, PARAM, PARAMETERS, RATIOS } from "./parameters.js";
 
+/** Pitch is continuous MIDI: 69 is A440, 69.5 the quarter-tone above it. Thrown from here
+ * because the engine cannot complain — a non-finite pitch would make a NaN phase, so the
+ * engine refuses it silently and this is the only layer that can say why. */
+function assertPitch(pitch, where) {
+  if (typeof pitch !== "number" || !Number.isFinite(pitch)) {
+    throw new TypeError(
+      `${where}: pitch must be a finite number (MIDI, fractional allowed), got ${
+        typeof pitch === "number" ? pitch : typeof pitch}`);
+  }
+  return pitch;
+}
+
+/** Same for scheduled events, including `createEngine`'s: a bad pitch in an offline
+ * render would otherwise surface as a silent voice in a finished buffer. */
+function assertEvents(events, where) {
+  if (events === undefined) return events;
+  if (!Array.isArray(events)) throw new TypeError(`${where}: events must be an array`);
+  for (const event of events) {
+    if (event?.type === "noteOn" || event?.type === "noteOff") {
+      assertPitch(event.note, `${where}: ${event.type} at ${event.at}s`);
+    }
+  }
+  return events;
+}
+
 /**
  * Create the engine. Lazy: the AudioContext is constructed here, so call it from a
  * user gesture (browsers refuse to start audio otherwise).
@@ -23,6 +48,7 @@ export { ALGORITHM, PARAM, PARAMETERS, RATIOS } from "./parameters.js";
  * Call it from a user gesture — browsers refuse to start audio otherwise.
  */
 export async function createEngine({ wasmUrl, workletUrl, context, initialEvents, connect = true } = {}) {
+  assertEvents(initialEvents, "createEngine initialEvents");
   const ownsContext = context === undefined;
   const Context = globalThis.AudioContext ?? globalThis.webkitAudioContext;
   const ctx = context ?? new Context();
@@ -185,13 +211,15 @@ export async function createEngine({ wasmUrl, workletUrl, context, initialEvents
       output: node,
       resume,
       noteOn: (note, vel = 0.8) => {
+        assertPitch(note, "noteOn");
         resumeIfNeeded();
         post({ type: "noteOn", note, vel });
       },
-      noteOff: (note) => post({ type: "noteOff", note }),
+      noteOff: (note) => post({ type: "noteOff", note: assertPitch(note, "noteOff") }),
       allOff: () => post({ type: "allOff" }),
       /** Schedule events at absolute context times. Applied on the exact frame. */
       schedule: (events) => {
+        assertEvents(events, "schedule");
         resumeIfNeeded();
         post({ type: "schedule", events });
       },

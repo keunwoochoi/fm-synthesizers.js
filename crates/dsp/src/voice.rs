@@ -71,7 +71,11 @@ impl Patch {
 
 #[derive(Clone, Copy)]
 pub struct Voice {
-    pub note: u8,
+    /// MIDI pitch, continuous. A whole number is the MIDI note of the same value; the
+    /// fraction is the part of a semitone above it, so 60.5 is a quarter-tone above
+    /// middle C. `midi_to_hz` has always taken an f32 -- what was integer was the
+    /// boundary this value arrives through, never the arithmetic below it.
+    pub pitch: f32,
     pub active: bool,
     pub age: u32,
     ops: [Operator; MAX_OPS],
@@ -100,7 +104,7 @@ pub struct Voice {
 impl Voice {
     pub const fn new() -> Self {
         Voice {
-            note: 0,
+            pitch: 0.0,
             active: false,
             age: 0,
             ops: [Operator::new(); MAX_OPS],
@@ -116,19 +120,26 @@ impl Voice {
         }
     }
 
-    pub fn start(&mut self, note: u8, vel: f32, patch: &Patch, sr: f32, seed: u32) {
-        self.note = note;
+    pub fn start(&mut self, pitch: f32, vel: f32, patch: &Patch, sr: f32, seed: u32) {
+        self.pitch = pitch;
         self.active = true;
         self.age = 0;
         self.vel = vel.clamp(0.0, 1.0);
-        self.f0 = midi_to_hz(note as f32);
+        self.f0 = midi_to_hz(pitch);
         self.hb[0].reset();
         self.hb_final.reset();
 
         // Per-voice character, seeded from the engine so no two voices share a drift
         // path. Bounded: drift stays inside ~+-4 cents, the walk target re-rolls within
         // it, and envelope times jitter by a fixed +-4% per voice.
-        let mut s = seed.wrapping_mul(2654435761).wrapping_add(note as u32);
+        // `pitch as u32` truncates, so the drift path a voice draws is the same for every
+        // pitch inside a semitone. Deliberate, and it is also what keeps this bit-identical
+        // to the u8 version for whole-numbered pitches: a float-to-int cast in Rust
+        // saturates rather than wrapping, so a negative or huge pitch lands on 0 or u32::MAX
+        // instead of being undefined. Seeding from the fraction as well would give every
+        // microtonal degree its own drift path, which is not obviously better and is not
+        // free -- it would change the sound of every existing note.
+        let mut s = seed.wrapping_mul(2654435761).wrapping_add(pitch as u32);
         s ^= s << 13; s ^= s >> 17; s ^= s << 5;
         self.drift_seed = s;
         self.drift_cents = (s as f32 / u32::MAX as f32 - 0.5) * 4.0;

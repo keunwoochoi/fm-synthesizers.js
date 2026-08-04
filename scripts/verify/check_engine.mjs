@@ -394,6 +394,117 @@ console.log("engine checks (shipped WASM)\n");
   x.engine_free(e);
 }
 
+// --- fractional pitch: the note boundary carries the fraction, end to end.
+//
+// The tuning gate in verify_spec.py grades render_osc, which is handed a frequency in Hz
+// and never sees a note number, so nothing there can see a note->Hz path that truncates.
+// This measures the SOUNDING frequency of a note started through note_on, which is the
+// only place a lost fraction shows up.
+//
+// Tolerance is +-5 cents, matching the drift check above, because per-voice drift is
+// +-2 cents by construction and a tuning assertion has to clear it. That is nowhere near
+// tight enough to be fooled: a truncating boundary puts 60.5 at 60, which is 50 cents out.
+{
+  const e = x.engine_new(SR);
+  // Same setup as the drift check above, and for the same reason: in Mod1 the CARRIER is
+  // op2, so silencing op1 leaves a bare carrier whose zero crossings are the pitch. Set
+  // up any other way this measures the modulator's ratio instead of the note — which it
+  // did on the first attempt here, reporting every pitch exactly 1200 cents high because
+  // op2Ratio was left at its engine default.
+  x.set_param(e, P.algorithm, 0);
+  x.set_param(e, P.index, 0.5);
+  x.set_param(e, P.op1Level, 0.0);
+  x.set_param(e, P.op1Ratio, 1.0);
+  x.set_param(e, P.op2Ratio, 1.0);
+  x.set_param(e, P.op2Sustain, 0.9);
+  x.set_param(e, P.chorusMix, 0); x.set_param(e, P.delayMix, 0); x.set_param(e, P.reverbMix, 0);
+
+  const renderPitch = (pitch) => {
+    const n = Math.floor(SR * 1.4);
+    const out = new Float32Array(n);
+    x.note_on(e, pitch, 0.9);
+    for (let i = 0; i < n; i += 128) {
+      const f = Math.min(128, n - i);
+      x.render(e, f);
+      out.set(new Float32Array(x.memory.buffer, x.out_ptr(e), f), i);
+    }
+    x.all_off(e);
+    // Let the release run out, or the next note measures into this one's tail.
+    for (let i = 0; i < SR; i += 128) x.render(e, 128);
+    return out;
+  };
+  const fundOf = (a) => {
+    const from = Math.floor(SR * 0.3), N = Math.floor(SR * 0.8);
+    const crossings = [];
+    let prev = a[from], prevI = from;
+    for (let i = from + 1; i < from + N; i++) {
+      const v = a[i];
+      if (prev <= 0 && v > 0) crossings.push(prevI + prev / (prev - v));
+      prev = v; prevI = i;
+    }
+    if (crossings.length < 4) return 0;
+    const spans = [];
+    for (let i = 1; i < crossings.length; i++) spans.push(crossings[i] - crossings[i - 1]);
+    const sorted = spans.sort((a, b) => a - b);
+    return SR / sorted[Math.floor(sorted.length / 2)];
+  };
+  const cents = (f, want) => 1200 * Math.log2(f / want);
+  const hzOf = (pitch) => 440 * Math.pow(2, (pitch - 69) / 12);
+
+  // A440 first: the integer case must not have moved.
+  const a440 = fundOf(renderPitch(69));
+  check(Math.abs(cents(a440, 440)) < 5, "integer pitch 69 is still A440",
+        `${a440.toFixed(2)} Hz, ${cents(a440, 440).toFixed(2)} cents`);
+
+  // Quarter-tones, an odd division, and a fraction in a different register. Each would
+  // read as its floor if any step on the path still truncated.
+  for (const pitch of [60.5, 69.5, 69.25, 71.75, 45.5, 69 + 12 * 7 / 31]) {
+    const want = hzOf(pitch);
+    const got = fundOf(renderPitch(pitch));
+    const off = cents(got, want);
+    check(Math.abs(off) < 5, `pitch ${pitch} sounds its own frequency`,
+          `${got.toFixed(2)} Hz vs ${want.toFixed(2)} Hz wanted (${off.toFixed(2)} cents)`);
+    // Said the other way, so a failure is unambiguous about WHICH failure it is: a
+    // truncating boundary lands within a few cents of the floor, not 50-ish away.
+    check(Math.abs(cents(got, hzOf(Math.floor(pitch)))) > 20,
+          `pitch ${pitch} is not its own floor`,
+          `${Math.abs(cents(got, hzOf(Math.floor(pitch)))).toFixed(1)} cents above ${Math.floor(pitch)}`);
+  }
+  x.engine_free(e);
+}
+
+// --- the boundary refuses what it cannot render, rather than making a NaN.
+{
+  const e = x.engine_new(SR);
+  x.set_param(e, P.op1Level, 1.0);
+  for (const bad of [NaN, Infinity, -Infinity]) x.note_on(e, bad, 0.9);
+  check(x.active_voices(e) === 0, "a non-finite pitch starts no voice",
+        `${x.active_voices(e)} voices after NaN/Inf note_on`);
+
+  // And having refused, the engine is still usable and still silent-free.
+  x.note_on(e, 60, 0.9);
+  const n = SR / 2;
+  let finite = true;
+  for (let i = 0; i < n; i += 128) {
+    x.render(e, 128);
+    const view = new Float32Array(x.memory.buffer, x.out_ptr(e), 128);
+    for (let j = 0; j < 128; j++) if (!Number.isFinite(view[j])) { finite = false; break; }
+    if (!finite) break;
+  }
+  check(finite, "a refused note leaves no NaN behind in the output");
+  x.engine_free(e);
+}
+
+// --- out-of-range pitch is clamped deliberately, at both ends.
+{
+  const e = x.engine_new(SR);
+  x.set_param(e, P.op1Level, 1.0);
+  x.note_on(e, 200, 0.9);
+  check(x.active_voices(e) === 1, "a pitch above the range still starts a voice (clamped)");
+  x.all_off(e);
+  x.engine_free(e);
+}
+
 console.log();
 if (fails.length) {
   console.log(`ENGINE CHECKS FAIL — ${fails.length}: ${fails.join(", ")}`);

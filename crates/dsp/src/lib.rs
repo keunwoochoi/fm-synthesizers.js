@@ -101,11 +101,17 @@ impl Engine {
         }
     }
 
-    pub fn note_on(&mut self, note: u8, vel: f32) {
-        // Retrigger an existing voice for the same note rather than stacking two.
-        if let Some(i) = self.voices.iter().position(|v| v.active && v.note == note) {
+    pub fn note_on(&mut self, pitch: f32, vel: f32) {
+        // Retrigger an existing voice for the same pitch rather than stacking two.
+        //
+        // Matching a float with `==` is exact, and that is what is wanted here: the caller
+        // sends the same value for a retrigger, so the bits round-trip and compare equal.
+        // It is also temporary. Keying a voice on its pitch is what makes two voices at
+        // the same nominal key impossible, which is issue #9's subject; this stays as it
+        // was so that a bit-identity failure in THIS change has one possible cause.
+        if let Some(i) = self.voices.iter().position(|v| v.active && v.pitch == pitch) {
             self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
-            self.voices[i].start(note, vel, &self.patch, self.sr, self.seed);
+            self.voices[i].start(pitch, vel, &self.patch, self.sr, self.seed);
             return;
         }
         let idx = self
@@ -123,12 +129,12 @@ impl Engine {
                 oldest
             });
         self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
-        self.voices[idx].start(note, vel, &self.patch, self.sr, self.seed);
+        self.voices[idx].start(pitch, vel, &self.patch, self.sr, self.seed);
     }
 
-    pub fn note_off(&mut self, note: u8) {
+    pub fn note_off(&mut self, pitch: f32) {
         for v in self.voices.iter_mut() {
-            if v.active && v.note == note {
+            if v.active && v.pitch == pitch {
                 v.release();
             }
         }
@@ -242,18 +248,45 @@ macro_rules! eng {
     };
 }
 
-/// # Safety
-/// `p` must be a live pointer from `engine_new`.
-#[no_mangle]
-pub unsafe extern "C" fn note_on(p: *mut Engine, note: u32, vel: f32) {
-    eng!(p).note_on(note.min(127) as u8, vel);
+/// Non-finite pitch is refused rather than clamped.
+///
+/// This is the one place the "no silent fallbacks" rule has to bend, and it bends toward
+/// refusing rather than toward inventing: a NaN reaching `midi_to_hz` makes a NaN `f0`,
+/// which makes a NaN phase, which is unrecoverable for the life of the voice and poisons
+/// every spectral number measured downstream of it. There is no channel to report on from
+/// the audio thread -- no allocation, no locks, no JS -- so the loud half of the rule is
+/// enforced one layer up, where `createEngine().noteOn()` throws on a non-finite pitch
+/// before anything is posted to the worklet. Here, the note simply does not start.
+/// Degradation is acceptable; corruption is not.
+fn guard_pitch(pitch: f32) -> Option<f32> {
+    if pitch.is_finite() {
+        // Deliberate, and narrower than a continuous pitch strictly needs: 0..=127 is the
+        // range the u32 boundary already enforced, so every previously-valid call lands on
+        // the same number. MIDI 0 is 8.18 Hz and 127 is 12.5 kHz, which brackets anything a
+        // scale file will ask for. Widening it later is additive; starting wider would mean
+        // this change altered more than the fraction.
+        Some(pitch.clamp(0.0, 127.0))
+    } else {
+        None
+    }
 }
 
 /// # Safety
 /// `p` must be a live pointer from `engine_new`.
 #[no_mangle]
-pub unsafe extern "C" fn note_off(p: *mut Engine, note: u32) {
-    eng!(p).note_off(note.min(127) as u8);
+pub unsafe extern "C" fn note_on(p: *mut Engine, pitch: f32, vel: f32) {
+    if let Some(pitch) = guard_pitch(pitch) {
+        eng!(p).note_on(pitch, vel);
+    }
+}
+
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn note_off(p: *mut Engine, pitch: f32) {
+    if let Some(pitch) = guard_pitch(pitch) {
+        eng!(p).note_off(pitch);
+    }
 }
 
 /// # Safety

@@ -168,6 +168,43 @@ test("offline caller contexts do not wait for an undeliverable disposal acknowle
   assert.equal(MockNode.instances[0].disconnectCalls, 1);
 });
 
+// The engine cannot report a bad pitch: a NaN would become a NaN oscillator phase, and
+// the audio thread has no channel to complain on, so it refuses the note silently. That
+// makes THIS layer the only place a caller can be told, which makes it worth a test --
+// before it existed the i32 WASM parameter truncated the value and noteOn(undefined)
+// played MIDI 0 without a word.
+test("a fractional pitch is passed through, and a non-finite one throws", async () => {
+  const context = new MockContext("running");
+  const engine = await createEngine({ context, wasmUrl: "/engine.wasm", workletUrl: "/processor.js" });
+  const port = MockNode.instances[0].port;
+
+  engine.noteOn(69.5, 0.7);
+  assert.deepEqual(port.messages.at(-1), { type: "noteOn", note: 69.5, vel: 0.7 },
+    "the fraction must survive the boundary, not be rounded on the way out");
+  engine.noteOff(69.5);
+  assert.deepEqual(port.messages.at(-1), { type: "noteOff", note: 69.5 });
+
+  const sent = port.messages.length;
+  for (const bad of [NaN, Infinity, -Infinity, undefined, null, "60", {}]) {
+    assert.throws(() => engine.noteOn(bad), /pitch must be a finite number/,
+      `noteOn(${String(bad)}) must throw`);
+    assert.throws(() => engine.noteOff(bad), /pitch must be a finite number/);
+  }
+  assert.equal(port.messages.length, sent, "a rejected pitch must post nothing");
+
+  // Scheduled events go through the same gate, including the offline-render path where a
+  // silent voice in a finished buffer would have nothing to point at.
+  assert.throws(() => engine.schedule([{ type: "noteOn", note: NaN, vel: 0.5, at: 1 }]),
+    /pitch must be a finite number/);
+  assert.equal(port.messages.length, sent, "a rejected schedule must post nothing");
+  await assert.rejects(
+    createEngine({
+      context: new MockContext("running"), wasmUrl: "/engine.wasm", workletUrl: "/processor.js",
+      initialEvents: [{ type: "noteOn", note: Infinity, vel: 0.5, at: 0 }],
+    }),
+    /pitch must be a finite number/);
+});
+
 test("noteOn and resume recover interrupted and future non-running states but not closed", async () => {
   const context = new MockContext("interrupted");
   const engine = await createEngine({ context, wasmUrl: "/engine.wasm", workletUrl: "/processor.js" });
