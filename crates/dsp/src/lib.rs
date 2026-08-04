@@ -101,17 +101,18 @@ impl Engine {
         }
     }
 
-    pub fn note_on(&mut self, pitch: f32, vel: f32) {
-        // Retrigger an existing voice for the same pitch rather than stacking two.
-        //
-        // Matching a float with `==` is exact, and that is what is wanted here: the caller
-        // sends the same value for a retrigger, so the bits round-trip and compare equal.
-        // It is also temporary. Keying a voice on its pitch is what makes two voices at
-        // the same nominal key impossible, which is issue #9's subject; this stays as it
-        // was so that a bit-identity failure in THIS change has one possible cause.
-        if let Some(i) = self.voices.iter().position(|v| v.active && v.pitch == pitch) {
+    /// Start or retrigger the voice named `id`.
+    ///
+    /// A voice's name is now separate from its pitch. That separation is the whole point:
+    /// while they were the same value, two voices could not hold the same nominal key at
+    /// different tunings (the ordinary case under MPE, and under any scale with more
+    /// degrees than the controller has keys), and a sounding voice could not be referred
+    /// to except by the pitch one wanted to change.
+    pub fn note_on(&mut self, pitch: f32, vel: f32, id: u32) {
+        // Retrigger the voice with this id rather than stacking two.
+        if let Some(i) = self.voices.iter().position(|v| v.active && v.id == id) {
             self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
-            self.voices[i].start(pitch, vel, &self.patch, self.sr, self.seed);
+            self.voices[i].start(pitch, vel, id, &self.patch, self.sr, self.seed);
             return;
         }
         let idx = self
@@ -129,12 +130,13 @@ impl Engine {
                 oldest
             });
         self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
-        self.voices[idx].start(pitch, vel, &self.patch, self.sr, self.seed);
+        self.voices[idx].start(pitch, vel, id, &self.patch, self.sr, self.seed);
     }
 
-    pub fn note_off(&mut self, pitch: f32) {
+    /// Release the voice named `id`. An id that names nothing sounding is a no-op.
+    pub fn note_off(&mut self, id: u32) {
         for v in self.voices.iter_mut() {
-            if v.active && v.pitch == pitch {
+            if v.active && v.id == id {
                 v.release();
             }
         }
@@ -271,12 +273,42 @@ fn guard_pitch(pitch: f32) -> Option<f32> {
     }
 }
 
+/// The id a caller gets when it does not supply one: the bit pattern of the clamped pitch.
+///
+/// The requirement is that a caller who never mentions ids sees exactly the behaviour it
+/// saw when the pitch WAS the identity — `note_on(60.0)` twice retriggers one voice,
+/// `note_off(60.0)` finds it. A bijection from pitch to id gives that for free, and the
+/// float's own bits are the only such mapping that costs nothing and loses nothing.
+///
+/// The obvious alternative, `pitch as u32`, is not a bijection: it truncates, so 60.5 and
+/// 60.7 would collide and retrigger each other. That is wrong in the case this whole
+/// sequence exists to serve.
+///
+/// Negative zero is folded onto zero first. `-0.0 == 0.0` is true for floats but their
+/// bits differ, so without this `note_on(-0.0)` and `note_on(0.0)` would be two voices
+/// where every other pair of equal pitches is one.
+fn derived_id(pitch: f32) -> u32 {
+    if pitch == 0.0 { 0.0f32 } else { pitch }.to_bits()
+}
+
 /// # Safety
 /// `p` must be a live pointer from `engine_new`.
 #[no_mangle]
 pub unsafe extern "C" fn note_on(p: *mut Engine, pitch: f32, vel: f32) {
     if let Some(pitch) = guard_pitch(pitch) {
-        eng!(p).note_on(pitch, vel);
+        eng!(p).note_on(pitch, vel, derived_id(pitch));
+    }
+}
+
+/// Start a note under a caller-chosen id. Two notes at the same pitch with different ids
+/// sound together; the same id twice retriggers one voice.
+///
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn note_on_id(p: *mut Engine, pitch: f32, vel: f32, id: u32) {
+    if let Some(pitch) = guard_pitch(pitch) {
+        eng!(p).note_on(pitch, vel, id);
     }
 }
 
@@ -285,8 +317,17 @@ pub unsafe extern "C" fn note_on(p: *mut Engine, pitch: f32, vel: f32) {
 #[no_mangle]
 pub unsafe extern "C" fn note_off(p: *mut Engine, pitch: f32) {
     if let Some(pitch) = guard_pitch(pitch) {
-        eng!(p).note_off(pitch);
+        eng!(p).note_off(derived_id(pitch));
     }
+}
+
+/// Release a note by the id it was started under.
+///
+/// # Safety
+/// `p` must be a live pointer from `engine_new`.
+#[no_mangle]
+pub unsafe extern "C" fn note_off_id(p: *mut Engine, id: u32) {
+    eng!(p).note_off(id);
 }
 
 /// # Safety

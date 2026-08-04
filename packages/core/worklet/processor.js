@@ -97,8 +97,17 @@ class FmProcessor extends AudioWorkletProcessor {
 
   apply(e) {
     switch (e.type) {
-      case "noteOn":  this.wasm.note_on(this.engine, e.note, e.vel); break;
-      case "noteOff": this.wasm.note_off(this.engine, e.note); break;
+      // Two exports rather than one with a sentinel id: every u32 is a legitimate id, so
+      // there is no spare value to mean "derive one for me". The 2-argument form derives
+      // the id from the pitch and is what a caller that never mentions ids reaches.
+      case "noteOn":
+        if (e.noteId === undefined) this.wasm.note_on(this.engine, e.note, e.vel);
+        else this.wasm.note_on_id(this.engine, e.note, e.vel, e.noteId);
+        break;
+      case "noteOff":
+        if (e.noteId === undefined) this.wasm.note_off(this.engine, e.note);
+        else this.wasm.note_off_id(this.engine, e.noteId);
+        break;
       case "allOff":  this.wasm.all_off(this.engine); break;
       case "param":   this.wasm.set_param(this.engine, e.id, e.value); break;
     }

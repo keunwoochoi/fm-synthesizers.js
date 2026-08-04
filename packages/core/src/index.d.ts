@@ -12,6 +12,11 @@ export interface ScheduledEvent {
   note?: number;
   /** 0..1, for noteOn. */
   vel?: number;
+  /**
+   * A name for this note, for noteOn / noteOff. Omit it and one is derived from the
+   * pitch. Supply it to hold two notes at the same pitch, or to release one of them.
+   */
+  noteId?: number;
   /** Parameter id, for `param`. See {@link PARAM}. */
   id?: number;
   value?: number;
@@ -38,10 +43,17 @@ export interface Engine {
    * Start a note now. `note` is MIDI pitch (60 = middle C), `vel` is 0..1. Pitch is
    * continuous, so any tuning is playable — `noteOn(69.5)` is the quarter-tone above
    * A440. Outside 0..127 it is clamped; non-finite throws.
+   *
+   * `noteId` names the note. Omit it and the same pitch retriggers one voice, as before.
+   * Supply distinct ids to hold the same pitch twice — two tunings of one key, or a
+   * per-note expression channel.
    */
-  noteOn(note: number, vel?: number): void;
-  /** Release a note now, by the same pitch it was started with; its amp release still rings out. */
-  noteOff(note: number): void;
+  noteOn(note: number, vel?: number, noteId?: number): void;
+  /**
+   * Release a note now; its amp release still rings out. Pass the `noteId` it was started
+   * with, or omit it to release the note started at this pitch.
+   */
+  noteOff(note: number, noteId?: number): void;
   /** Release every sounding note, tails intact. */
   allOff(): void;
   /** Queue events at absolute context times; applied on the exact frame. */

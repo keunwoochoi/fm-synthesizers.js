@@ -21,6 +21,17 @@ function assertPitch(pitch, where) {
   return pitch;
 }
 
+/** A note id is a name the caller chooses for a sounding note. Any 32-bit unsigned value;
+ * omitting it derives one from the pitch, which is what makes ignoring ids behave exactly
+ * as it did when the pitch WAS the identity. */
+function assertNoteId(noteId, where) {
+  if (noteId === undefined) return noteId;
+  if (typeof noteId !== "number" || !Number.isInteger(noteId) || noteId < 0 || noteId > 0xffffffff) {
+    throw new TypeError(`${where}: noteId must be an integer in 0..4294967295, got ${noteId}`);
+  }
+  return noteId;
+}
+
 /** Same for scheduled events, including `createEngine`'s: a bad pitch in an offline
  * render would otherwise surface as a silent voice in a finished buffer. */
 function assertEvents(events, where) {
@@ -29,6 +40,7 @@ function assertEvents(events, where) {
   for (const event of events) {
     if (event?.type === "noteOn" || event?.type === "noteOff") {
       assertPitch(event.note, `${where}: ${event.type} at ${event.at}s`);
+      assertNoteId(event.noteId, `${where}: ${event.type} at ${event.at}s`);
     }
   }
   return events;
@@ -210,12 +222,24 @@ export async function createEngine({ wasmUrl, workletUrl, context, initialEvents
       node,
       output: node,
       resume,
-      noteOn: (note, vel = 0.8) => {
+      // `noteId` is left OFF the message when it is undefined rather than sent as
+      // undefined: the worklet switches on its presence, and a structured-clone of an
+      // explicit `undefined` would still be an own property.
+      noteOn: (note, vel = 0.8, noteId) => {
         assertPitch(note, "noteOn");
+        assertNoteId(noteId, "noteOn");
         resumeIfNeeded();
-        post({ type: "noteOn", note, vel });
+        post(noteId === undefined
+          ? { type: "noteOn", note, vel }
+          : { type: "noteOn", note, vel, noteId });
       },
-      noteOff: (note) => post({ type: "noteOff", note: assertPitch(note, "noteOff") }),
+      noteOff: (note, noteId) => {
+        assertPitch(note, "noteOff");
+        assertNoteId(noteId, "noteOff");
+        post(noteId === undefined
+          ? { type: "noteOff", note }
+          : { type: "noteOff", note, noteId });
+      },
       allOff: () => post({ type: "allOff" }),
       /** Schedule events at absolute context times. Applied on the exact frame. */
       schedule: (events) => {

@@ -76,6 +76,10 @@ pub struct Voice {
     /// middle C. `midi_to_hz` has always taken an f32 -- what was integer was the
     /// boundary this value arrives through, never the arithmetic below it.
     pub pitch: f32,
+    /// What the caller calls this voice. Independent of `pitch`, which is what lets two
+    /// voices hold the same nominal key at different tunings, and what lets a sounding
+    /// voice be referred to in order to change its pitch.
+    pub id: u32,
     pub active: bool,
     pub age: u32,
     ops: [Operator; MAX_OPS],
@@ -105,6 +109,7 @@ impl Voice {
     pub const fn new() -> Self {
         Voice {
             pitch: 0.0,
+            id: 0,
             active: false,
             age: 0,
             ops: [Operator::new(); MAX_OPS],
@@ -120,8 +125,9 @@ impl Voice {
         }
     }
 
-    pub fn start(&mut self, pitch: f32, vel: f32, patch: &Patch, sr: f32, seed: u32) {
+    pub fn start(&mut self, pitch: f32, vel: f32, id: u32, patch: &Patch, sr: f32, seed: u32) {
         self.pitch = pitch;
+        self.id = id;
         self.active = true;
         self.age = 0;
         self.vel = vel.clamp(0.0, 1.0);

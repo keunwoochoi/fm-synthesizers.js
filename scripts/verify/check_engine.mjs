@@ -495,6 +495,94 @@ console.log("engine checks (shipped WASM)\n");
   x.engine_free(e);
 }
 
+// --- voice identity: a voice's name is separate from its pitch.
+//
+// This is the property that makes microtonal and per-note-expression playing possible at
+// all. While the pitch WAS the identity, two voices could not hold the same nominal key
+// at different tunings, and a sounding voice could not be named in order to change it.
+{
+  const fresh = () => {
+    const e = x.engine_new(SR);
+    x.set_param(e, P.op1Level, 1.0);
+    x.set_param(e, P.op2Sustain, 0.9);
+    return e;
+  };
+
+  // Distinct ids at the SAME pitch stack. This is the case that was impossible.
+  {
+    const e = fresh();
+    x.note_on_id(e, 60, 0.8, 1);
+    x.note_on_id(e, 60, 0.8, 2);
+    check(x.active_voices(e) === 2, "two ids at the same pitch sound together",
+          `${x.active_voices(e)} voices`);
+    x.note_off_id(e, 1);
+    x.render(e, 128);
+    check(x.active_voices(e) === 2, "releasing one id leaves the other sounding",
+          `${x.active_voices(e)} voices still active (one releasing, one held)`);
+    x.engine_free(e);
+  }
+
+  // The same id twice retriggers, exactly as the same pitch twice used to.
+  {
+    const e = fresh();
+    x.note_on_id(e, 60, 0.8, 7);
+    x.note_on_id(e, 64, 0.8, 7);
+    check(x.active_voices(e) === 1, "the same id twice retriggers one voice",
+          `${x.active_voices(e)} voices`);
+    x.engine_free(e);
+  }
+
+  // Omitting the id must behave as it always did — this is the compatibility rule the
+  // frozen baseline proves in bulk, asserted here in the specific.
+  {
+    const e = fresh();
+    x.note_on(e, 60, 0.8);
+    x.note_on(e, 60, 0.8);
+    check(x.active_voices(e) === 1, "the same pitch twice still retriggers when no id is given",
+          `${x.active_voices(e)} voices`);
+    x.note_off(e, 60);
+    x.render(e, 128);
+    x.engine_free(e);
+  }
+
+  // A derived id must distinguish pitches a truncating derivation would collide. 60.5 and
+  // 60.7 are the case that rules out `pitch as u32`.
+  {
+    const e = fresh();
+    x.note_on(e, 60.5, 0.8);
+    x.note_on(e, 60.7, 0.8);
+    check(x.active_voices(e) === 2, "two nearby fractional pitches are two voices",
+          `${x.active_voices(e)} voices — a truncating id derivation would report 1`);
+    x.engine_free(e);
+  }
+
+  // Releasing an id that names nothing is a no-op, not an error and not a stuck voice.
+  {
+    const e = fresh();
+    x.note_on_id(e, 60, 0.8, 3);
+    x.note_off_id(e, 999);
+    x.render(e, 128);
+    check(x.active_voices(e) === 1, "releasing an unknown id disturbs nothing",
+          `${x.active_voices(e)} voices`);
+    x.note_off_id(e, 999);
+    x.engine_free(e);
+  }
+
+  // Stealing is still oldest-first, and it is the voice SLOT that is reused, not the id.
+  {
+    const e = fresh();
+    for (let i = 0; i < 20; i++) x.note_on_id(e, 40 + i, 0.8, 100 + i);
+    check(x.active_voices(e) === 16, "polyphony is still bounded by the voice pool",
+          `${x.active_voices(e)} voices for 20 ids`);
+    // The first four ids were stolen; releasing them must not disturb the survivors.
+    for (let i = 0; i < 4; i++) x.note_off_id(e, 100 + i);
+    x.render(e, 128);
+    check(x.active_voices(e) === 16, "releasing a stolen id does not release its successor",
+          `${x.active_voices(e)} voices`);
+    x.engine_free(e);
+  }
+}
+
 // --- out-of-range pitch is clamped deliberately, at both ends.
 {
   const e = x.engine_new(SR);

@@ -11,6 +11,8 @@ This file records what changed for **users of the package**. The engineering rec
 
 - `noteOn` and `noteOff` take a **fractional MIDI pitch**, so any tuning is playable: `noteOn(69.5)` is the quarter-tone above A440, and step *k* of an *n*-tone equal division of the octave is `69 + 12 * k / n`. Previously the value was truncated to an integer, and `noteOn(60.7)` sounded note 60.
 
+- An optional **`noteId`** on `noteOn`, `noteOff`, and scheduled events, naming a sounding note independently of its pitch. Two notes at the same pitch with different ids sound together — one key at two tunings, or a per-note expression channel. Omit it and the same pitch retriggers one voice, exactly as before.
+
 ### Changed
 
 - A non-finite pitch now throws a `TypeError` instead of sounding something arbitrary. `noteOn(undefined)` used to play MIDI 0 in silence. Scheduled events and `createEngine({ initialEvents })` are checked the same way.
